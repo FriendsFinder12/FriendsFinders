@@ -166,6 +166,7 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 │   └── architecture.md             # How it is built, failure handling and design decisions
 ├── generated-diagrams/             # Architecture diagrams (PNG + draw.io)
 ├── dist/                           # Generated Lambda bundles + zips
+├── AGENTS.md                       # Project rules for AI coding assistants (CLAUDE.md and GEMINI.md point to it)
 ├── package.json                    # Backend
 ├── tsconfig.json
 ├── jest.config.ts
