@@ -1,6 +1,7 @@
 resource "aws_cognito_user_pool" "main" {
   name = "${var.project_name}-user-pool"
 
+  deletion_protection      = var.protect ? "ACTIVE" : "INACTIVE"
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 

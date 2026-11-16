@@ -1,22 +1,32 @@
 resource "aws_dynamodb_table" "users" {
-  name         = "${var.project_name}-users"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "userId"
+  name                        = "${var.project_name}-users"
+  billing_mode                = "PAY_PER_REQUEST"
+  deletion_protection_enabled = var.protect
+  hash_key                    = "userId"
 
   attribute {
     name = "userId"
     type = "S"
   }
 
+  dynamic "point_in_time_recovery" {
+    for_each = var.protect ? [1] : []
+
+    content {
+      enabled = true
+    }
+  }
+
   tags = var.tags
 }
 
 resource "aws_dynamodb_table" "connections" {
-  name             = "${var.project_name}-connections"
-  billing_mode     = "PAY_PER_REQUEST"
-  hash_key         = "connectionId"
-  stream_enabled   = true
-  stream_view_type = "NEW_AND_OLD_IMAGES"
+  name                        = "${var.project_name}-connections"
+  billing_mode                = "PAY_PER_REQUEST"
+  deletion_protection_enabled = var.protect
+  hash_key                    = "connectionId"
+  stream_enabled              = true
+  stream_view_type            = "NEW_AND_OLD_IMAGES"
 
   attribute {
     name = "connectionId"
@@ -54,13 +64,22 @@ resource "aws_dynamodb_table" "connections" {
     enabled        = true
   }
 
+  dynamic "point_in_time_recovery" {
+    for_each = var.protect ? [1] : []
+
+    content {
+      enabled = true
+    }
+  }
+
   tags = var.tags
 }
 
 resource "aws_dynamodb_table" "friend_requests" {
-  name         = "${var.project_name}-friend-requests"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "requestId"
+  name                        = "${var.project_name}-friend-requests"
+  billing_mode                = "PAY_PER_REQUEST"
+  deletion_protection_enabled = var.protect
+  hash_key                    = "requestId"
 
   attribute {
     name = "requestId"
@@ -89,6 +108,14 @@ resource "aws_dynamodb_table" "friend_requests" {
     projection_type = "ALL"
   }
 
+  dynamic "point_in_time_recovery" {
+    for_each = var.protect ? [1] : []
+
+    content {
+      enabled = true
+    }
+  }
+
   tags = var.tags
 }
 
@@ -96,10 +123,11 @@ resource "aws_dynamodb_table" "friend_requests" {
 # userId". A friendship is stored twice, once for each user, and both items are written (or
 # removed) together in a single transaction.
 resource "aws_dynamodb_table" "friendships" {
-  name         = "${var.project_name}-friendships"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "userId"
-  range_key    = "friendId"
+  name                        = "${var.project_name}-friendships"
+  billing_mode                = "PAY_PER_REQUEST"
+  deletion_protection_enabled = var.protect
+  hash_key                    = "userId"
+  range_key                   = "friendId"
 
   attribute {
     name = "userId"
@@ -117,6 +145,14 @@ resource "aws_dynamodb_table" "friendships" {
     hash_key        = "friendId"
     range_key       = "userId"
     projection_type = "ALL"
+  }
+
+  dynamic "point_in_time_recovery" {
+    for_each = var.protect ? [1] : []
+
+    content {
+      enabled = true
+    }
   }
 
   tags = var.tags

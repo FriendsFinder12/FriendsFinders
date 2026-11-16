@@ -23,3 +23,9 @@ variable "logout_urls" {
   description = "Allowed logout redirect URLs for the web client"
   type        = list(string)
 }
+
+variable "protect" {
+  description = "Production safeguard: block deletion of the user pool"
+  type        = bool
+  default     = false
+}

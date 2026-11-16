@@ -34,6 +34,7 @@ AWS SDK for JavaScript v3, modular clients only:
 - Remote state in S3 with a DynamoDB lock table; the bucket name is supplied at `init` time (see `terraform/backend.hcl.example`) because it differs per AWS account
 - The provider versions are pinned by the committed `terraform/.terraform.lock.hcl`
 - One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and `terraform/envs/<env>.backend.hcl` gives the environment its own state key. Without them Terraform builds the original single stack.
+- `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms.
 
 ## Testing
 

@@ -35,6 +35,8 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 locals {
+  protect = var.environment == "prod"
+
   # The Environment tag always follows var.environment, whatever var.tags says.
   tags = merge(var.tags, { Environment = var.environment })
 }
@@ -45,6 +47,7 @@ module "dynamodb" {
   source = "./modules/dynamodb"
 
   project_name = var.project_name
+  protect      = local.protect
   tags         = local.tags
 }
 
@@ -55,6 +58,7 @@ module "s3" {
 
   project_name   = var.project_name
   aws_account_id = data.aws_caller_identity.current.account_id
+  protect        = local.protect
   tags           = local.tags
 }
 
@@ -79,7 +83,7 @@ resource "aws_apigatewayv2_api" "websocket" {
 
 resource "aws_apigatewayv2_stage" "websocket" {
   api_id      = aws_apigatewayv2_api.websocket.id
-  name        = "prod"
+  name        = var.websocket_stage_name
   auto_deploy = true
 
   default_route_settings {
@@ -168,6 +172,7 @@ module "frontend" {
 module "cognito" {
   source = "./modules/cognito"
 
+  protect               = local.protect
   project_name          = var.project_name
   cognito_domain_prefix = "${var.project_name}-${data.aws_caller_identity.current.account_id}"
   callback_urls         = ["${module.frontend.cloudfront_url}/"]
@@ -195,6 +200,9 @@ module "frontend_deploy" {
 module "monitoring" {
   source = "./modules/monitoring"
 
+  name_prefix                     = var.project_name
+  log_retention_days              = var.log_retention_days
+  alarm_email                     = var.alarm_email
   websocket_handler_function_name = module.lambda.websocket_handler_function_name
   rest_handler_function_name      = module.lambda.rest_handler_function_name
   fanout_handler_function_name    = module.lambda.fanout_handler_function_name
