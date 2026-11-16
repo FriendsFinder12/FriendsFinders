@@ -31,9 +31,9 @@ AWS SDK for JavaScript v3, modular clients only:
 
 - Terraform only (no CDK, SAM or Serverless Framework); everything is declarative
 - Modules: `api-gateway`, `lambda`, `dynamodb`, `cognito`, `frontend`, `frontend-deploy`, `iam`, `ssm`, `s3`, `monitoring`, plus `cicd.tf` for the GitHub deploy role
-- Remote state in S3 with a DynamoDB lock table; the bucket name is supplied at `init` time (see `terraform/backend.hcl.example`) because it differs per AWS account
+- State and locking in HCP Terraform, one workspace per environment (`friendsfinders-dev`, `friendsfinders-prod`) in the `nearbyfriends` organization, with the execution mode set to Local. Terraform still runs on the machine or CI runner that calls it, because it needs `dist/` and the AWS CLI; HCP only stores and locks the state. The organization and workspace come from `TF_CLOUD_ORGANIZATION` and `TF_WORKSPACE`, not from the code.
 - The provider versions are pinned by the committed `terraform/.terraform.lock.hcl`
-- One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and `terraform/envs/<env>.backend.hcl` gives the environment its own state key. Without them Terraform builds the original single stack.
+- One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and its own HCP workspace keeps its state. Without them Terraform builds the original single stack.
 - `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms.
 
 ## Testing
@@ -85,9 +85,11 @@ npm run test:frontend
 # Coverage
 npx jest --coverage
 
-# Terraform (first time: pass your state bucket, see terraform/backend.hcl.example)
+# Terraform (first time: run `terraform login`; then pick the environment)
 cd terraform
-terraform init -backend-config=backend.hcl
-terraform plan
-terraform apply
+export TF_CLOUD_ORGANIZATION=nearbyfriends
+export TF_WORKSPACE=friendsfinders-dev    # or friendsfinders-prod
+terraform init
+terraform plan -var-file=envs/dev.tfvars
+terraform apply -var-file=envs/dev.tfvars
 ```
