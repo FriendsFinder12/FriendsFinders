@@ -32,6 +32,7 @@ Nearby Friends is an academic-purpose serverless real-time location sharing back
 
 5. **Infrastructure as Code**:
    - Terraform only (`terraform/` directory with modular structure).
+   - Two environments, `dev` and `prod`, are separate stacks from the same code (`terraform/envs/`): they differ only in configuration, never in `src/`.
    - Remote state via S3 bucket + DynamoDB lock table.
    - CI/CD via GitHub Actions (`.github/workflows/deploy.yml`) using AWS OIDC role assumption.
 
@@ -72,9 +73,10 @@ npm run test:property # Property tests (fast-check)
 npm run test:frontend # Web app tests (jsdom)
 
 # Terraform (copy terraform/backend.hcl.example to backend.hcl and set your state bucket first)
-cd terraform && terraform init -backend-config=backend.hcl
-terraform plan
-terraform apply
+# Each environment (dev, prod) has its own tfvars and state key in terraform/envs/
+cd terraform && terraform init -backend-config=backend.hcl -backend-config=envs/dev.backend.hcl
+terraform plan -var-file=envs/dev.tfvars
+terraform apply -var-file=envs/dev.tfvars
 ```
 
 ---

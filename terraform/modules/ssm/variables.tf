@@ -1,3 +1,9 @@
+variable "ssm_prefix" {
+  description = "Path prefix for the runtime settings, without a trailing slash (e.g. /nearby-friends or /nearby-friends-prod)"
+  type        = string
+  default     = "/nearby-friends"
+}
+
 variable "search_radius_miles" {
   description = "Search radius in miles"
   type        = string

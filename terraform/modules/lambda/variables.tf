@@ -63,3 +63,9 @@ variable "cognito_user_pool_id" {
   description = "Cognito User Pool ID for WebSocket token verification"
   type        = string
 }
+
+variable "ssm_prefix" {
+  description = "Path prefix of the runtime settings read from SSM (must match the ssm module)"
+  type        = string
+  default     = "/nearby-friends"
+}

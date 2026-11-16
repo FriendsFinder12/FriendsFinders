@@ -130,6 +130,7 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 │   ├── main.tf                     # incl. S3 remote-state backend block
 │   ├── backend.hcl.example         # per-account state bucket name (copy to backend.hcl)
 │   ├── cicd.tf                     # GitHub OIDC provider + CI deploy role
+│   ├── envs/                       # per-environment settings: dev.tfvars, prod.tfvars and their state keys
 │   ├── variables.tf, outputs.tf
 │   └── modules/
 │       ├── api-gateway/    ├── lambda/          ├── dynamodb/
@@ -198,14 +199,16 @@ npm run build             # Bundle Lambdas → dist/*.zip
 # --- Deploy (first time: see "Deployment & CI/CD" for remote-state setup) ---
 cd terraform
 cp backend.hcl.example backend.hcl    # then set your own state bucket name in it
-terraform init -backend-config=backend.hcl
-terraform apply
+terraform init -backend-config=backend.hcl -backend-config=envs/dev.backend.hcl
+terraform apply -var-file=envs/dev.tfvars
 
 # After deploy, get the frontend URL
 terraform output frontend_url
 ```
 
 The Terraform `frontend-deploy` module uploads `frontend/index.html` to S3 and injects runtime config (Cognito IDs, API endpoints) into the page so it can talk to the deployed backend. The frontend has no build step — the file is deployed as-is.
+
+**Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and `terraform/envs/<env>.backend.hcl` gives it its own state key, so both can live in one AWS account. Switching environment means running `init` again with `-reconfigure` and the other `.backend.hcl`. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
 
 > **First-time deploy:** Terraform state is stored remotely (S3 + DynamoDB lock), so a fresh `terraform init` needs the state backend to exist first, and the bucket name (which differs per AWS account) is passed in `backend.hcl`. See **Deployment & CI/CD** below for the one-time bootstrap.
 

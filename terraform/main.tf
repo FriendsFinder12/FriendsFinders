@@ -34,13 +34,18 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+locals {
+  # The Environment tag always follows var.environment, whatever var.tags says.
+  tags = merge(var.tags, { Environment = var.environment })
+}
+
 # --- DynamoDB Tables ---
 
 module "dynamodb" {
   source = "./modules/dynamodb"
 
   project_name = var.project_name
-  tags         = var.tags
+  tags         = local.tags
 }
 
 # --- S3 Bucket ---
@@ -50,7 +55,7 @@ module "s3" {
 
   project_name   = var.project_name
   aws_account_id = data.aws_caller_identity.current.account_id
-  tags           = var.tags
+  tags           = local.tags
 }
 
 # --- SSM Parameters ---
@@ -58,7 +63,8 @@ module "s3" {
 module "ssm" {
   source = "./modules/ssm"
 
-  tags = var.tags
+  ssm_prefix = var.ssm_prefix
+  tags       = local.tags
 }
 
 # --- WebSocket API (created early to break circular dependency) ---
@@ -68,7 +74,7 @@ resource "aws_apigatewayv2_api" "websocket" {
   protocol_type              = "WEBSOCKET"
   route_selection_expression = "$request.body.action"
 
-  tags = var.tags
+  tags = local.tags
 }
 
 resource "aws_apigatewayv2_stage" "websocket" {
@@ -81,7 +87,7 @@ resource "aws_apigatewayv2_stage" "websocket" {
     throttling_rate_limit  = 50
   }
 
-  tags = var.tags
+  tags = local.tags
 }
 
 locals {
@@ -103,7 +109,7 @@ module "iam" {
   s3_bucket_arn                = module.s3.bucket_arn
   ssm_parameter_arns           = module.ssm.parameter_arns
   websocket_api_arn            = local.websocket_api_arn
-  tags                         = var.tags
+  tags                         = local.tags
 }
 
 # --- Lambda Functions ---
@@ -123,7 +129,8 @@ module "lambda" {
   s3_bucket_name               = module.s3.bucket_name
   websocket_api_endpoint       = local.websocket_api_endpoint
   cognito_user_pool_id         = module.cognito.user_pool_id
-  tags                         = var.tags
+  ssm_prefix                   = var.ssm_prefix
+  tags                         = local.tags
 }
 
 # --- API Gateway Routes & Integrations ---
@@ -141,7 +148,7 @@ module "api_gateway" {
   cognito_issuer_url              = module.cognito.issuer_url
   web_client_id                   = module.cognito.web_client_id
   mobile_client_id                = module.cognito.mobile_client_id
-  tags                            = var.tags
+  tags                            = local.tags
 }
 
 # --- Frontend infrastructure (S3 + CloudFront) ---
@@ -152,7 +159,7 @@ module "frontend" {
 
   project_name   = var.project_name
   aws_account_id = data.aws_caller_identity.current.account_id
-  tags           = var.tags
+  tags           = local.tags
 }
 
 # --- Cognito ---
@@ -165,7 +172,7 @@ module "cognito" {
   cognito_domain_prefix = "${var.project_name}-${data.aws_caller_identity.current.account_id}"
   callback_urls         = ["${module.frontend.cloudfront_url}/"]
   logout_urls           = ["${module.frontend.cloudfront_url}/"]
-  tags                  = var.tags
+  tags                  = local.tags
 }
 
 # --- Frontend deploy (uploads index.html with injected runtime config) ---
@@ -191,5 +198,5 @@ module "monitoring" {
   websocket_handler_function_name = module.lambda.websocket_handler_function_name
   rest_handler_function_name      = module.lambda.rest_handler_function_name
   fanout_handler_function_name    = module.lambda.fanout_handler_function_name
-  tags                            = var.tags
+  tags                            = local.tags
 }

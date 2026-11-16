@@ -33,6 +33,7 @@ AWS SDK for JavaScript v3, modular clients only:
 - Modules: `api-gateway`, `lambda`, `dynamodb`, `cognito`, `frontend`, `frontend-deploy`, `iam`, `ssm`, `s3`, `monitoring`, plus `cicd.tf` for the GitHub deploy role
 - Remote state in S3 with a DynamoDB lock table; the bucket name is supplied at `init` time (see `terraform/backend.hcl.example`) because it differs per AWS account
 - The provider versions are pinned by the committed `terraform/.terraform.lock.hcl`
+- One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and `terraform/envs/<env>.backend.hcl` gives the environment its own state key. Without them Terraform builds the original single stack.
 
 ## Testing
 
@@ -51,6 +52,8 @@ AWS SDK for JavaScript v3, modular clients only:
 - Earth radius: 3958.8 miles (for Haversine)
 
 ## SSM Parameters
+
+The paths below are the defaults (`ssm_prefix = /nearby-friends`). An environment sets its own prefix, for example `/nearby-friends-prod`, and the Lambdas receive the full paths through the `SSM_*` environment variables.
 
 - `/nearby-friends/search-radius-miles` (default: 5)
 - `/nearby-friends/inactivity-ttl-seconds` (default: 600)

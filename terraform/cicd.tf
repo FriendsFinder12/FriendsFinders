@@ -9,7 +9,7 @@
 variable "github_repo" {
   description = "GitHub repo (owner/name) allowed to assume the deploy role"
   type        = string
-  default     = "sebastian0023/FriendsFinders"
+  default     = "FriendsFinder12/FriendsFinders"
 }
 
 # GitHub's OIDC identity provider. There can be only ONE per AWS account — if
@@ -22,7 +22,7 @@ resource "aws_iam_openid_connect_provider" "github" {
     "6938fd4d98bab03faadb97b34396831e3780aea1",
     "1c58a3a8518e8759bf075b76b750d4f2df264fca",
   ]
-  tags = var.tags
+  tags = local.tags
 }
 
 # Trust policy: only the GitHub Actions workflow on the main branch of this
@@ -54,7 +54,7 @@ data "aws_iam_policy_document" "github_actions_trust" {
 resource "aws_iam_role" "github_actions_deploy" {
   name               = "${var.project_name}-github-actions-deploy"
   assume_role_policy = data.aws_iam_policy_document.github_actions_trust.json
-  tags               = var.tags
+  tags               = local.tags
 }
 
 # Broad access so Terraform can manage the whole stack + remote state.

@@ -34,10 +34,10 @@ resource "aws_lambda_function" "websocket_handler" {
       FRIENDSHIPS_TABLE_NAME       = var.friendships_table_name
       S3_BUCKET_NAME               = var.s3_bucket_name
       WEBSOCKET_API_ENDPOINT       = replace(var.websocket_api_endpoint, "wss://", "https://")
-      SSM_SEARCH_RADIUS            = "/nearby-friends/search-radius-miles"
-      SSM_INACTIVITY_TTL           = "/nearby-friends/inactivity-ttl-seconds"
-      SSM_LOCATION_UPDATE_INTERVAL = "/nearby-friends/location-update-interval-seconds"
-      SSM_MAX_FRIENDS              = "/nearby-friends/max-friends"
+      SSM_SEARCH_RADIUS            = "${var.ssm_prefix}/search-radius-miles"
+      SSM_INACTIVITY_TTL           = "${var.ssm_prefix}/inactivity-ttl-seconds"
+      SSM_LOCATION_UPDATE_INTERVAL = "${var.ssm_prefix}/location-update-interval-seconds"
+      SSM_MAX_FRIENDS              = "${var.ssm_prefix}/max-friends"
       COGNITO_USER_POOL_ID         = var.cognito_user_pool_id
     }
   }
@@ -64,10 +64,10 @@ resource "aws_lambda_function" "rest_handler" {
       FRIENDSHIPS_TABLE_NAME     = var.friendships_table_name
       S3_BUCKET_NAME             = var.s3_bucket_name
       WEBSOCKET_API_ENDPOINT     = replace(var.websocket_api_endpoint, "wss://", "https://")
-      SSM_SEARCH_RADIUS          = "/nearby-friends/search-radius-miles"
-      SSM_INACTIVITY_TTL         = "/nearby-friends/inactivity-ttl-seconds"
-      SSM_MAX_FRIENDS            = "/nearby-friends/max-friends"
-      SSM_NEARBY_STRANGERS_LIMIT = "/nearby-friends/nearby-strangers-limit"
+      SSM_SEARCH_RADIUS          = "${var.ssm_prefix}/search-radius-miles"
+      SSM_INACTIVITY_TTL         = "${var.ssm_prefix}/inactivity-ttl-seconds"
+      SSM_MAX_FRIENDS            = "${var.ssm_prefix}/max-friends"
+      SSM_NEARBY_STRANGERS_LIMIT = "${var.ssm_prefix}/nearby-strangers-limit"
     }
   }
 
@@ -92,8 +92,8 @@ resource "aws_lambda_function" "fanout_handler" {
       FRIENDSHIPS_TABLE_NAME = var.friendships_table_name
       S3_BUCKET_NAME         = var.s3_bucket_name
       WEBSOCKET_API_ENDPOINT = replace(var.websocket_api_endpoint, "wss://", "https://")
-      SSM_SEARCH_RADIUS      = "/nearby-friends/search-radius-miles"
-      SSM_INACTIVITY_TTL     = "/nearby-friends/inactivity-ttl-seconds"
+      SSM_SEARCH_RADIUS      = "${var.ssm_prefix}/search-radius-miles"
+      SSM_INACTIVITY_TTL     = "${var.ssm_prefix}/inactivity-ttl-seconds"
     }
   }
 
