@@ -1,0 +1,52 @@
+name: CI
+
+# Checks every pull request into develop or production. Nothing here touches AWS or HCP
+# Terraform, so it needs no secrets and also runs for pull requests from forks.
+on:
+  pull_request:
+    branches: [develop, production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  code:
+    name: Type-check, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm test
+      - run: npm run build   # node scripts/build.js -> dist/*.zip
+
+  terraform:
+    name: Terraform format and validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Format
+        run: terraform fmt -check -recursive
+        working-directory: terraform
+
+      # -backend=false: validation only needs the configuration, not the HCP workspace.
+      - name: Validate
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+        working-directory: terraform
