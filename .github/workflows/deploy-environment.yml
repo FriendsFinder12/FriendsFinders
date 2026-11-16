@@ -7,7 +7,8 @@ name: Deploy an environment
 # Each GitHub Environment (develop, production) supplies:
 #   - variable AWS_DEPLOY_ROLE_ARN: the role this stack's Terraform created for it (cicd.tf),
 #     which only jobs of that Environment can assume through OIDC (no AWS keys stored);
-#   - secret TF_TOKEN_APP_TERRAFORM_IO: the HCP Terraform token that reads and locks the state.
+#   - secret TF_TOKEN_APP_TERRAFORM_IO: the HCP Terraform token that reads and locks the state;
+#   - optional secret ALARM_EMAIL: where the Lambda error alarms are sent (production only).
 # The production Environment also requires a reviewer to approve before the job starts.
 on:
   workflow_call:
@@ -43,6 +44,8 @@ jobs:
       TF_WORKSPACE: ${{ inputs.workspace }}
       # Terraform reads the token from this exact name; GitHub stores secret names in capitals.
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
+      # An unset secret is an empty string, which means no alarm email.
+      TF_VAR_alarm_email: ${{ secrets.ALARM_EMAIL }}
     steps:
       - uses: actions/checkout@v4
 

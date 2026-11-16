@@ -35,7 +35,7 @@ AWS SDK for JavaScript v3, modular clients only:
 - CI/CD with GitHub Actions in `.github/workflows/`: `ci.yml` (pull requests: type-check, tests, build, `terraform fmt` and `validate`), `deploy-dev.yml` (push to `develop`) and `deploy-production.yml` (push to `production`, with reviewer approval), both calling the reusable `deploy-environment.yml`. GitHub Environments `develop` and `production` hold the variable `AWS_DEPLOY_ROLE_ARN` and the secret `TF_TOKEN_APP_TERRAFORM_IO`.
 - The provider versions are pinned by the committed `terraform/.terraform.lock.hcl`
 - One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and its own HCP workspace keeps its state. Without them Terraform builds the original single stack.
-- `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms.
+- `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms; it comes from the `ALARM_EMAIL` secret of the production GitHub Environment or from `TF_VAR_alarm_email`, never from a committed file.
 
 ## Testing
 

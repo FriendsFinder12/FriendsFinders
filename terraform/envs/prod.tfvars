@@ -8,9 +8,10 @@ ssm_prefix   = "/nearby-friends-prod"
 websocket_stage_name = "prod"
 log_retention_days   = 30
 
-# Email for the Lambda error alarms; AWS sends a confirmation message to it. Uncomment and set
-# your own address, or pass it with -var alarm_email=...
-alarm_email = "gilbertoeybarrai@gmail.com"
+# The email for the Lambda error alarms is not kept here, because this repository is public.
+# Deploys read it from the secret ALARM_EMAIL of the production GitHub Environment; locally, run
+#   export TF_VAR_alarm_email=you@example.com
+# AWS sends a confirmation message to that address.
 
 # Only jobs of the GitHub Environment "production" can assume this stack's deploy role. The
 # OIDC provider already exists (created by the dev stack), so this stack only looks it up.
