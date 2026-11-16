@@ -57,10 +57,10 @@ resource "aws_iam_role" "github_actions_deploy" {
   tags               = local.tags
 }
 
-# Broad access so Terraform can manage the whole stack + remote state.
+# Broad access so Terraform can manage the whole stack.
 # For production, scope this down to the services actually used (Lambda, API
-# Gateway, DynamoDB, S3, Cognito, CloudFront, IAM, SSM, CloudWatch) plus the
-# state bucket and lock table.
+# Gateway, DynamoDB, S3, Cognito, CloudFront, IAM, SSM, CloudWatch). The state is in HCP
+# Terraform, so this role needs nothing for it.
 resource "aws_iam_role_policy_attachment" "github_actions_admin" {
   role       = aws_iam_role.github_actions_deploy.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"

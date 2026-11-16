@@ -1,16 +1,14 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.1"
 
-  # Remote state — required so CI (ephemeral runners) shares one state file.
-  # The bucket + lock table are created once by scripts/bootstrap-tf-backend.sh.
-  # The bucket name is account-specific, so it is NOT set here. Supply it at init:
-  #   terraform init -backend-config=backend.hcl   (see backend.hcl.example)
-  backend "s3" {
-    key            = "friendsfinders/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "friendsfinders-tf-lock"
-    encrypt        = true
-  }
+  # State lives in HCP Terraform (one workspace per environment), which also locks it, so CI
+  # runners share one state and there is no bucket or lock table to maintain. Runs execute on
+  # the machine that calls terraform (execution mode "Local" on the workspace): the Lambda
+  # zips in dist/ and the AWS CLI call in frontend-deploy only exist there.
+  # The organization and workspace are not set here. Supply them in the environment:
+  #   export TF_CLOUD_ORGANIZATION=nearbyfriends
+  #   export TF_WORKSPACE=friendsfinders-dev        # or friendsfinders-prod
+  cloud {}
 
   required_providers {
     aws = {

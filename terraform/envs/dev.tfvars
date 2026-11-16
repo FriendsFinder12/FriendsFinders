@@ -1,5 +1,5 @@
 # Settings for the dev environment. Use with:
-#   terraform init -backend-config=backend.hcl -backend-config=envs/dev.backend.hcl
+#   TF_WORKSPACE=friendsfinders-dev terraform init
 #   terraform plan -var-file=envs/dev.tfvars
 environment  = "dev"
 project_name = "nearby-friends-dev"

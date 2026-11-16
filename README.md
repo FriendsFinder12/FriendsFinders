@@ -113,7 +113,7 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 **Infrastructure**
 
 - Terraform (no CDK, SAM, or Serverless Framework)
-- Terraform remote state — S3 bucket + DynamoDB lock table
+- Terraform state and locking — HCP Terraform (one workspace per environment)
 - GitHub Actions — automated deploy on push to `main` (OIDC, no static keys)
 
 ---
@@ -127,10 +127,9 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 ├── frontend/
 │   └── index.html                  # Entire web app — HTML + CSS + JS, deployed as-is
 ├── terraform/
-│   ├── main.tf                     # incl. S3 remote-state backend block
-│   ├── backend.hcl.example         # per-account state bucket name (copy to backend.hcl)
+│   ├── main.tf                     # incl. the HCP Terraform (cloud) block that holds the state
 │   ├── cicd.tf                     # GitHub OIDC provider + CI deploy role
-│   ├── envs/                       # per-environment settings: dev.tfvars, prod.tfvars and their state keys
+│   ├── envs/                       # per-environment settings: dev.tfvars, prod.tfvars
 │   ├── variables.tf, outputs.tf
 │   └── modules/
 │       ├── api-gateway/    ├── lambda/          ├── dynamodb/
@@ -160,7 +159,6 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 │   └── helpers/                    # Shared test builders
 ├── scripts/
 │   ├── build.js                    # esbuild bundler → dist/<handler>.zip
-│   └── bootstrap-tf-backend.sh     # one-time: create TF remote-state bucket + lock
 ├── docs/                           # Product, technology and architecture documentation
 │   ├── product.md                  # What the app does and its API
 │   ├── tech.md                     # Stack, settings and commands
@@ -196,10 +194,12 @@ npm install
 npx tsc --noEmit          # Type-check
 npm run build             # Bundle Lambdas → dist/*.zip
 
-# --- Deploy (first time: see "Deployment & CI/CD" for remote-state setup) ---
+# --- Deploy (first time: see "Deployment & CI/CD" for the HCP Terraform setup) ---
 cd terraform
-cp backend.hcl.example backend.hcl    # then set your own state bucket name in it
-terraform init -backend-config=backend.hcl -backend-config=envs/dev.backend.hcl
+terraform login                                  # once: stores your HCP Terraform token
+export TF_CLOUD_ORGANIZATION=nearbyfriends
+export TF_WORKSPACE=friendsfinders-dev           # or friendsfinders-prod
+terraform init
 terraform apply -var-file=envs/dev.tfvars
 
 # After deploy, get the frontend URL
@@ -208,9 +208,9 @@ terraform output frontend_url
 
 The Terraform `frontend-deploy` module uploads `frontend/index.html` to S3 and injects runtime config (Cognito IDs, API endpoints) into the page so it can talk to the deployed backend. The frontend has no build step — the file is deployed as-is.
 
-**Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and `terraform/envs/<env>.backend.hcl` gives it its own state key, so both can live in one AWS account. Switching environment means running `init` again with `-reconfigure` and the other `.backend.hcl`. `prod` also switches on safeguards: deletion protection and point-in-time recovery on the DynamoDB tables, deletion protection on the Cognito user pool, versioning on the profile-picture bucket and 30-day log retention. Set `alarm_email` to get the Lambda error alarms by email (AWS asks the address to confirm). Each environment has its own WebSocket stage name (`dev` or `prod`), which is the last part of the WebSocket URL. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
+**Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and each has its own HCP Terraform workspace (`friendsfinders-dev`, `friendsfinders-prod`), so both can live in one AWS account. Switching environment means changing `TF_WORKSPACE` and the `-var-file`. `prod` also switches on safeguards: deletion protection and point-in-time recovery on the DynamoDB tables, deletion protection on the Cognito user pool, versioning on the profile-picture bucket and 30-day log retention. Set `alarm_email` to get the Lambda error alarms by email (AWS asks the address to confirm). Each environment has its own WebSocket stage name (`dev` or `prod`), which is the last part of the WebSocket URL. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
 
-> **First-time deploy:** Terraform state is stored remotely (S3 + DynamoDB lock), so a fresh `terraform init` needs the state backend to exist first, and the bucket name (which differs per AWS account) is passed in `backend.hcl`. See **Deployment & CI/CD** below for the one-time bootstrap.
+> **First-time deploy:** Terraform state is stored in HCP Terraform, so a fresh `terraform init` needs an HCP organization with the two workspaces and `terraform login` first. See **Deployment & CI/CD** below for the one-time setup.
 
 ---
 
@@ -249,21 +249,24 @@ GitHub Actions ──(OIDC: assume IAM role, no static keys)──► AWS
      ├── npm ci && npm run build        # Lambda zips
      └── terraform init && apply        # backend + infra + frontend
               │
-              └── state ◄──► S3 state bucket + DynamoDB lock table
+              └── state ◄──► HCP Terraform workspace
 ```
 
-- **Remote state** — Terraform state lives in an S3 bucket with a DynamoDB lock table, so ephemeral CI runners share one source of truth (`backend "s3"` block in [`terraform/main.tf`](terraform/main.tf)).
+- **Remote state** — Terraform state and its lock live in HCP Terraform, one workspace per environment, so ephemeral CI runners share one source of truth (the `cloud` block in [`terraform/main.tf`](terraform/main.tf)). The workspaces use execution mode *Local*: HCP only stores and locks the state, and Terraform runs where it is called because it needs `dist/` and the AWS CLI.
 - **Auth via OIDC** — GitHub Actions assumes an IAM role using a short-lived OIDC token; no long-lived AWS keys are stored. The OIDC provider + role are defined in [`terraform/cicd.tf`](terraform/cicd.tf), with trust scoped to this repo's `main` branch.
 
 **One-time setup** (run locally, before the first CI deploy):
 
 ```bash
-# 1. Name your state bucket (copy terraform/backend.hcl.example to terraform/backend.hcl and edit it),
-#    then create the bucket + lock table
-bash scripts/bootstrap-tf-backend.sh
+# 1. In app.terraform.io create the organization (nearbyfriends) and two CLI-driven workspaces,
+#    friendsfinders-dev and friendsfinders-prod, with Execution Mode = Local. Then sign in:
+terraform login
 
-# 2. Point Terraform at it (add -migrate-state if you already have local state)
-cd terraform && terraform init -backend-config=backend.hcl
+# 2. Point Terraform at a workspace
+cd terraform
+export TF_CLOUD_ORGANIZATION=nearbyfriends
+export TF_WORKSPACE=friendsfinders-dev
+terraform init
 
 # 3. Apply once to create the OIDC provider + CI deploy role
 terraform apply
@@ -333,7 +336,7 @@ At low traffic (academic project), estimated monthly cost is under $5–10:
 - Cognito: free up to 50,000 MAUs
 - CloudFront: free tier covers low traffic
 - SSM: free tier covers parameter reads
-- CI/CD: GitHub Actions free minutes cover low-volume deploys; S3 state bucket + DynamoDB lock table cost pennies
+- CI/CD: GitHub Actions free minutes cover low-volume deploys; HCP Terraform's free tier holds the state
 - No VPC, no NAT Gateway, no Redis = no fixed monthly costs
 
 ---
