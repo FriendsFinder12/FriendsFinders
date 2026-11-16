@@ -1,0 +1,81 @@
+name: Deploy an environment
+
+# Reusable workflow: builds the Lambdas and applies Terraform for one environment. It is called
+# by deploy-dev.yml (push to develop) and deploy-production.yml (push to production), never
+# started by hand.
+#
+# Each GitHub Environment (develop, production) supplies:
+#   - variable AWS_DEPLOY_ROLE_ARN: the role this stack's Terraform created for it (cicd.tf),
+#     which only jobs of that Environment can assume through OIDC (no AWS keys stored);
+#   - secret TF_TOKEN_APP_TERRAFORM_IO: the HCP Terraform token that reads and locks the state.
+# The production Environment also requires a reviewer to approve before the job starts.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment to deploy to (develop or production)
+        type: string
+        required: true
+      workspace:
+        description: HCP Terraform workspace that holds the state
+        type: string
+        required: true
+      tfvars:
+        description: Terraform variables file for the environment, relative to terraform/
+        type: string
+        required: true
+
+permissions:
+  id-token: write   # request the OIDC token that AWS exchanges for the role
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    # Never run two deploys of the same environment at once; let a running one finish.
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      TF_CLOUD_ORGANIZATION: nearbyfriends
+      TF_WORKSPACE: ${{ inputs.workspace }}
+      # Terraform reads the token from this exact name; GitHub stores secret names in capitals.
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm test
+      - name: Build the Lambda bundles
+        run: npm run build   # node scripts/build.js -> dist/*.zip
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init -input=false
+        working-directory: terraform
+
+      - name: Terraform plan
+        run: terraform plan -input=false -var-file=${{ inputs.tfvars }} -out=tfplan
+        working-directory: terraform
+
+      - name: Terraform apply
+        run: terraform apply -input=false tfplan
+        working-directory: terraform
