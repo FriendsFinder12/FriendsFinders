@@ -10,4 +10,4 @@ log_retention_days   = 30
 
 # Email for the Lambda error alarms; AWS sends a confirmation message to it. Uncomment and set
 # your own address, or pass it with -var alarm_email=...
-# alarm_email = "you@example.com"
+alarm_email = "gilbertoeybarrai@gmail.com"
