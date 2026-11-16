@@ -114,7 +114,7 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 
 - Terraform (no CDK, SAM, or Serverless Framework)
 - Terraform state and locking — HCP Terraform (one workspace per environment)
-- GitHub Actions — automated deploy on push to `main` (OIDC, no static keys)
+- GitHub Actions — CI on pull requests, automatic deploy of `dev` on push to `develop` and of `prod` on push to `production` after approval (OIDC for AWS)
 
 ---
 
@@ -123,7 +123,10 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 ```
 /
 ├── .github/workflows/
-│   └── deploy.yml                  # CI/CD — build + terraform apply on push to main
+│   ├── ci.yml                      # pull requests: type-check, test, build, terraform fmt/validate
+│   ├── deploy-environment.yml      # reusable: build + terraform apply for one environment
+│   ├── deploy-dev.yml              # push to develop -> dev
+│   └── deploy-production.yml       # push to production -> prod, after approval
 ├── frontend/
 │   └── index.html                  # Entire web app — HTML + CSS + JS, deployed as-is
 ├── terraform/
@@ -208,7 +211,7 @@ terraform output frontend_url
 
 The Terraform `frontend-deploy` module uploads `frontend/index.html` to S3 and injects runtime config (Cognito IDs, API endpoints) into the page so it can talk to the deployed backend. The frontend has no build step — the file is deployed as-is.
 
-**Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and each has its own HCP Terraform workspace (`friendsfinders-dev`, `friendsfinders-prod`), so both can live in one AWS account. Switching environment means changing `TF_WORKSPACE` and the `-var-file`. `prod` also switches on safeguards: deletion protection and point-in-time recovery on the DynamoDB tables, deletion protection on the Cognito user pool, versioning on the profile-picture bucket and 30-day log retention. Set `alarm_email` to get the Lambda error alarms by email (AWS asks the address to confirm). Each environment has its own WebSocket stage name (`dev` or `prod`), which is the last part of the WebSocket URL. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
+**Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and each has its own HCP Terraform workspace (`friendsfinders-dev`, `friendsfinders-prod`), so both can live in one AWS account. Switching environment means changing `TF_WORKSPACE` and the `-var-file`. `prod` also switches on safeguards: deletion protection and point-in-time recovery on the DynamoDB tables, deletion protection on the Cognito user pool, versioning on the profile-picture bucket and 30-day log retention. The Lambda error alarms are sent by email to the address in the `ALARM_EMAIL` secret of the `production` GitHub Environment (locally, `export TF_VAR_alarm_email=...`; AWS asks the address to confirm). It is a secret because the repository is public. Each environment has its own WebSocket stage name (`dev` or `prod`), which is the last part of the WebSocket URL. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
 
 > **First-time deploy:** Terraform state is stored in HCP Terraform, so a fresh `terraform init` needs an HCP organization with the two workspaces and `terraform login` first. See **Deployment & CI/CD** below for the one-time setup.
 
@@ -238,42 +241,55 @@ The tests are the executable description of how the system behaves: when a route
 
 ## 🔄 Deployment & CI/CD
 
-Every push to `main` triggers a GitHub Actions workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) that builds the Lambda bundles and runs `terraform apply` — shipping backend, infrastructure, and frontend in one step.
+Two long-lived branches, two environments. A push deploys the matching environment with GitHub Actions:
+
+| Branch | Environment | Workflow | Approval |
+|---|---|---|---|
+| `develop` | `dev` (GitHub Environment `develop`, HCP workspace `friendsfinders-dev`) | [`deploy-dev.yml`](.github/workflows/deploy-dev.yml) | none; docs-only pushes do not deploy |
+| `production` | `prod` (GitHub Environment `production`, HCP workspace `friendsfinders-prod`) | [`deploy-production.yml`](.github/workflows/deploy-production.yml) | a reviewer approves the job first |
+
+Both call [`deploy-environment.yml`](.github/workflows/deploy-environment.yml), and every pull request into `develop` or `production` runs [`ci.yml`](.github/workflows/ci.yml). Changes flow `feature branch → develop → production`; `main` does not deploy.
 
 ```
-push → main
-     │
+push → develop / production
+     │  (production waits for a reviewer's approval)
      ▼
-GitHub Actions ──(OIDC: assume IAM role, no static keys)──► AWS
+GitHub Actions ──(OIDC: assume the environment's IAM role, no AWS keys)──► AWS
      │
-     ├── npm ci && npm run build        # Lambda zips
-     └── terraform init && apply        # backend + infra + frontend
+     ├── npm ci, type-check, test, build   # Lambda zips
+     └── terraform init, plan, apply       # backend + infra + frontend
               │
-              └── state ◄──► HCP Terraform workspace
+              └── state ◄──► HCP Terraform workspace (token from the Environment secret)
 ```
 
+- **CI on pull requests** — type-check, tests, build, `terraform fmt` and `terraform validate`. It needs no secrets, so it also runs for forks. It does not run `terraform plan`, because that needs the HCP token and AWS access, which only the deploy jobs may hold.
 - **Remote state** — Terraform state and its lock live in HCP Terraform, one workspace per environment, so ephemeral CI runners share one source of truth (the `cloud` block in [`terraform/main.tf`](terraform/main.tf)). The workspaces use execution mode *Local*: HCP only stores and locks the state, and Terraform runs where it is called because it needs `dist/` and the AWS CLI.
-- **Auth via OIDC** — GitHub Actions assumes an IAM role using a short-lived OIDC token; no long-lived AWS keys are stored. The OIDC provider + role are defined in [`terraform/cicd.tf`](terraform/cicd.tf), with trust scoped to this repo's `main` branch.
+- **Auth via OIDC** — GitHub Actions assumes an IAM role using a short-lived OIDC token; no long-lived AWS keys are stored. Each stack creates its own role in [`terraform/cicd.tf`](terraform/cicd.tf), and its trust only accepts jobs of its own GitHub Environment, so a deploy to dev can never assume the prod role. The account's single GitHub OIDC provider is created by the dev stack and only looked up by prod.
+- **The one stored secret** — the HCP Terraform token (`TF_TOKEN_APP_TERRAFORM_IO`), saved as a secret of each GitHub Environment so only that environment's jobs can read it.
 
-**One-time setup** (run locally, before the first CI deploy):
+**One-time setup** (run locally; the HCP organization and workspaces, and the GitHub Environments with their secret and reviewer, are created in their web consoles):
 
 ```bash
-# 1. In app.terraform.io create the organization (nearbyfriends) and two CLI-driven workspaces,
+# 1. In app.terraform.io: the organization nearbyfriends and two CLI-driven workspaces,
 #    friendsfinders-dev and friendsfinders-prod, with Execution Mode = Local. Then sign in:
 terraform login
 
-# 2. Point Terraform at a workspace
+# 2. Create the dev stack. The first apply also creates the account's OIDC provider and the
+#    dev deploy role. Apply dev before prod: prod looks the provider up.
 cd terraform
-export TF_CLOUD_ORGANIZATION=nearbyfriends
-export TF_WORKSPACE=friendsfinders-dev
+export TF_CLOUD_ORGANIZATION=nearbyfriends TF_WORKSPACE=friendsfinders-dev
 terraform init
+terraform apply -var-file=envs/dev.tfvars
+terraform output github_actions_deploy_role_arn
 
-# 3. Apply once to create the OIDC provider + CI deploy role
-terraform apply
+# 3. The same for prod, with its own workspace and variables
+export TF_WORKSPACE=friendsfinders-prod
+terraform init
+terraform apply -var-file=envs/prod.tfvars
 terraform output github_actions_deploy_role_arn
 ```
 
-Then add that role ARN as a GitHub Actions **repository variable** named `AWS_DEPLOY_ROLE_ARN` (repo → Settings → Secrets and variables → Actions → Variables). After that, every push to `main` deploys automatically (or run it manually from the Actions tab).
+Then, in the repo's Settings → Environments, add each role ARN as a variable named `AWS_DEPLOY_ROLE_ARN` of its Environment (`develop` for the dev role, `production` for the prod one), next to the `TF_TOKEN_APP_TERRAFORM_IO` secret each already has. The `production` Environment requires a reviewer and only accepts the `production` branch. After that, every push deploys by itself (or run a deploy from the Actions tab).
 
 ---
 
@@ -302,6 +318,7 @@ Then add that role ARN as a GitHub Actions **repository variable** named `AWS_DE
 - **Haversine formula** — straight-line great-circle distance; no routing APIs.
 - **Tile-free map** — the Map tab is a client-side `<canvas>` radar (friends by distance + bearing); no external map/tile service, so the app stays fully serverless.
 - **Friendships in their own table** — one item per direction, so a friendship is two small rows created or removed together in one DynamoDB transaction. Profile reads stay small, there is no per-user size limit, and concurrent changes cannot overwrite each other.
+- **Two environments, two branches** — a push to `develop` deploys `dev` and a push to `production` deploys `prod` after a reviewer approves. They are separate stacks built from the same code, with separate state and a deploy role each, so a dev deploy cannot touch prod.
 - **Grid index for nearby strangers** — each connection stores the 0.1° grid square it is in (`geoCell`), and a search queries only the few squares that can contain someone within the radius instead of scanning the table.
 - **Friend requests only** — friends are added exclusively through the request/accept flow.
 - **Terraform only** — declarative infrastructure, no CDK/SAM/Serverless Framework.

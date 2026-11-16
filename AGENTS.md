@@ -34,7 +34,7 @@ Nearby Friends is an academic-purpose serverless real-time location sharing back
    - Terraform only (`terraform/` directory with modular structure).
    - Two environments, `dev` and `prod`, are separate stacks from the same code (`terraform/envs/`): they differ only in configuration, never in `src/`.
    - State and locking in HCP Terraform (organization `nearbyfriends`, workspaces `friendsfinders-dev` and `friendsfinders-prod`, execution mode Local).
-   - CI/CD via GitHub Actions (`.github/workflows/deploy.yml`) using AWS OIDC role assumption.
+   - CI/CD via GitHub Actions (`.github/workflows/`): `ci.yml` checks every pull request; a push to `develop` deploys `dev` and a push to `production` deploys `prod` after a reviewer approves the GitHub Environment. AWS access is by OIDC with one role per environment; the HCP token is the only stored secret.
 
 ---
 

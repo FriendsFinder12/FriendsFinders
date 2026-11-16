@@ -1,0 +1,21 @@
+name: Deploy production
+
+# A push to production deploys the prod environment, once a reviewer approves the job in the
+# production GitHub Environment. Run it by hand from the Actions tab to redeploy without a push.
+on:
+  push:
+    branches: [production]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: production
+      workspace: friendsfinders-prod
+      tfvars: envs/prod.tfvars
+    secrets: inherit

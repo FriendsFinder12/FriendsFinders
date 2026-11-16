@@ -32,9 +32,10 @@ AWS SDK for JavaScript v3, modular clients only:
 - Terraform only (no CDK, SAM or Serverless Framework); everything is declarative
 - Modules: `api-gateway`, `lambda`, `dynamodb`, `cognito`, `frontend`, `frontend-deploy`, `iam`, `ssm`, `s3`, `monitoring`, plus `cicd.tf` for the GitHub deploy role
 - State and locking in HCP Terraform, one workspace per environment (`friendsfinders-dev`, `friendsfinders-prod`) in the `nearbyfriends` organization, with the execution mode set to Local. Terraform still runs on the machine or CI runner that calls it, because it needs `dist/` and the AWS CLI; HCP only stores and locks the state. The organization and workspace come from `TF_CLOUD_ORGANIZATION` and `TF_WORKSPACE`, not from the code.
+- CI/CD with GitHub Actions in `.github/workflows/`: `ci.yml` (pull requests: type-check, tests, build, `terraform fmt` and `validate`), `deploy-dev.yml` (push to `develop`) and `deploy-production.yml` (push to `production`, with reviewer approval), both calling the reusable `deploy-environment.yml`. GitHub Environments `develop` and `production` hold the variable `AWS_DEPLOY_ROLE_ARN` and the secret `TF_TOKEN_APP_TERRAFORM_IO`.
 - The provider versions are pinned by the committed `terraform/.terraform.lock.hcl`
 - One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and its own HCP workspace keeps its state. Without them Terraform builds the original single stack.
-- `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms.
+- `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms; it comes from the `ALARM_EMAIL` secret of the production GitHub Environment or from `TF_VAR_alarm_email`, never from a committed file.
 
 ## Testing
 

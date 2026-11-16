@@ -187,7 +187,7 @@
         </mxCell>
 
         <!-- ==================== CI/CD & INFRASTRUCTURE PIPELINE (BOTTOM) ==================== -->
-        <mxCell id="cicd_container" value="Continuous Integration &amp;amp; Infrastructure as Code (Push to main branch)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#CBD5E1;strokeWidth=1;dashed=1;align=left;verticalAlign=top;spacingLeft=15;spacingTop=10;fontColor=#475569;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="cicd_container" value="Continuous Integration &amp;amp; Infrastructure as Code (push to develop = dev, push to production = prod)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#CBD5E1;strokeWidth=1;dashed=1;align=left;verticalAlign=top;spacingLeft=15;spacingTop=10;fontColor=#475569;fontSize=12;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="30" y="880" width="850" height="260" as="geometry"/>
         </mxCell>
 
@@ -195,7 +195,7 @@
         <mxCell id="icon_github" value="&lt;b style=&quot;color: #FFFFFF; font-size: 14px;&quot;&gt;GitHub&lt;br/&gt;Actions&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#24292F;strokeColor=none;align=center;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="60" y="930" width="80" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="label_github" value="&lt;b style=&quot;font-size: 12px; color: #232F3E;&quot;&gt;GitHub Actions CI/CD&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size: 10px; color: #64748B;&quot;&gt;.github/workflows/deploy.yml&lt;br/&gt;&amp;bull; npm ci &amp;amp; esbuild bundles&lt;br/&gt;&amp;bull; terraform init &amp;amp; apply&lt;/span&gt;&lt;br/&gt;&lt;b style=&quot;color: #16A34A; font-size: 10px;&quot;&gt;💰 $0.00 (2,000 Free mins)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;" vertex="1" parent="1">
+        <mxCell id="label_github" value="&lt;b style=&quot;font-size: 12px; color: #232F3E;&quot;&gt;GitHub Actions CI/CD&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size: 10px; color: #64748B;&quot;&gt;.github/workflows/deploy-*.yml&lt;br/&gt;&amp;bull; test &amp;amp; esbuild bundles&lt;br/&gt;&amp;bull; terraform plan &amp;amp; apply&lt;br/&gt;&amp;bull; prod needs approval&lt;/span&gt;&lt;br/&gt;&lt;b style=&quot;color: #16A34A; font-size: 10px;&quot;&gt;💰 $0.00 (2,000 Free mins)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;" vertex="1" parent="1">
           <mxGeometry x="10" y="995" width="180" height="65" as="geometry"/>
         </mxCell>
 
@@ -203,7 +203,7 @@
         <mxCell id="icon_iam_role" value="" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.identity_and_access_management;fillColor=#CC2264;strokeColor=#ffffff;outlineConnect=0;" vertex="1" parent="1">
           <mxGeometry x="330" y="930" width="60" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="label_iam_role" value="&lt;b style=&quot;font-size: 12px; color: #232F3E;&quot;&gt;AWS IAM OIDC Role&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size: 10px; color: #64748B;&quot;&gt;Short-lived STS Token&lt;br/&gt;Zero static credentials stored!&lt;/span&gt;&lt;br/&gt;&lt;b style=&quot;color: #16A34A; font-size: 10px;&quot;&gt;💰 $0.00 (IAM is Free)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;" vertex="1" parent="1">
+        <mxCell id="label_iam_role" value="&lt;b style=&quot;font-size: 12px; color: #232F3E;&quot;&gt;AWS IAM OIDC Role&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size: 10px; color: #64748B;&quot;&gt;Short-lived STS Token&lt;br/&gt;No AWS keys stored; one role per environment&lt;/span&gt;&lt;br/&gt;&lt;b style=&quot;color: #16A34A; font-size: 10px;&quot;&gt;💰 $0.00 (IAM is Free)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;" vertex="1" parent="1">
           <mxGeometry x="270" y="995" width="180" height="65" as="geometry"/>
         </mxCell>
 
