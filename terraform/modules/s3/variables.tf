@@ -13,3 +13,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "protect" {
+  description = "Production safeguard: keep object versions of the profile pictures"
+  type        = bool
+  default     = false
+}

@@ -8,3 +8,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "protect" {
+  description = "Production safeguards: deletion protection and point-in-time recovery"
+  type        = bool
+  default     = false
+}

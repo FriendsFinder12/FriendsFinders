@@ -27,6 +27,24 @@ variable "ssm_prefix" {
   default     = "/nearby-friends"
 }
 
+variable "websocket_stage_name" {
+  description = "Stage name in the WebSocket URL. Changing it recreates the stage and changes the URL"
+  type        = string
+  default     = "prod"
+}
+
+variable "log_retention_days" {
+  description = "How many days CloudWatch keeps the Lambda logs"
+  type        = number
+  default     = 14
+}
+
+variable "alarm_email" {
+  description = "Email address notified when a Lambda error alarm fires; empty means no notification"
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

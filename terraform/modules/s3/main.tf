@@ -22,3 +22,13 @@ resource "aws_s3_bucket_public_access_block" "profile_pictures" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+# Production keeps older versions of a picture so an overwrite or delete can be undone.
+resource "aws_s3_bucket_versioning" "profile_pictures" {
+  count  = var.protect ? 1 : 0
+  bucket = aws_s3_bucket.profile_pictures.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}

@@ -18,3 +18,20 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "name_prefix" {
+  description = "Prefix for the names of resources created here (the project name)"
+  type        = string
+}
+
+variable "log_retention_days" {
+  description = "How long CloudWatch keeps the Lambda logs"
+  type        = number
+  default     = 14
+}
+
+variable "alarm_email" {
+  description = "Email address notified when an alarm fires; empty means no notification"
+  type        = string
+  default     = ""
+}
