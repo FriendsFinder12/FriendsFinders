@@ -17,3 +17,6 @@ log_retention_days   = 30
 # OIDC provider already exists (created by the dev stack), so this stack only looks it up.
 github_environment          = "production"
 create_github_oidc_provider = false
+
+# GitHub puts ids in the subject of this repository's tokens (immutable subject claims).
+github_subject_prefix = "repo:FriendsFinder12@357106725/FriendsFinders@1245137645"

@@ -13,6 +13,12 @@ variable "github_repo" {
   default     = "FriendsFinder12/FriendsFinders"
 }
 
+variable "github_subject_prefix" {
+  description = "Start of the OIDC subject GitHub puts in its tokens. Repos with immutable subjects use ids (repo:ORG@id/REPO@id); read it with: gh api repos/OWNER/REPO/actions/oidc/customization/sub (sub_claim_prefix). Empty means repo:<github_repo>"
+  type        = string
+  default     = ""
+}
+
 variable "github_environment" {
   description = "GitHub Environment whose jobs may assume the deploy role (develop or production). Empty keeps the original rule: any job on the main branch"
   type        = string
@@ -59,7 +65,8 @@ locals {
 
   # Each stack's role can only be assumed by the jobs of its own GitHub Environment, so a deploy
   # to dev can never assume the prod role.
-  github_subject = var.github_environment == "" ? "repo:${var.github_repo}:ref:refs/heads/main" : "repo:${var.github_repo}:environment:${var.github_environment}"
+  github_subject_prefix = var.github_subject_prefix == "" ? "repo:${var.github_repo}" : var.github_subject_prefix
+  github_subject        = var.github_environment == "" ? "${local.github_subject_prefix}:ref:refs/heads/main" : "${local.github_subject_prefix}:environment:${var.github_environment}"
 }
 
 # Trust policy: only the GitHub Actions jobs of this repo that match github_subject may
