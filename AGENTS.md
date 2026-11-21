@@ -41,7 +41,7 @@ Nearby Friends is an academic-purpose serverless real-time location sharing back
 ## 💻 Tech Stack & Coding Conventions
 
 - **Language & Runtime**: Node.js 20 (the Lambda runtime is `nodejs20.x`), TypeScript (strict mode, CommonJS for Lambda packaging, ESNext target).
-- **AWS SDK**: AWS SDK v3 modular (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-apigatewaymanagementapi`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `@aws-sdk/client-ssm`).
+- **AWS SDK**: AWS SDK v3 modular (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-apigatewaymanagementapi`, `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `@aws-sdk/client-ssm`), wrapped for X-Ray tracing with `aws-xray-sdk-core` (`src/utils/tracing.ts`).
 - **Bundler**: `esbuild` via `scripts/build.js` packaging into `dist/*.zip`.
 - **Testing**:
   - Unit tests: `jest` with `ts-jest`.
