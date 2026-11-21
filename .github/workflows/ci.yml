@@ -27,7 +27,7 @@ jobs:
 
       - run: npm ci
       - run: npm run type-check
-      - run: npm test
+      - run: npm run test:coverage   # jest --coverage, fails below the thresholds in jest.config.ts
       - run: npm run build   # node scripts/build.js -> dist/*.zip
 
   terraform:
