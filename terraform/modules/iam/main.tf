@@ -80,6 +80,11 @@ data "aws_iam_policy_document" "websocket_handler" {
   }
 }
 
+resource "aws_iam_role_policy_attachment" "websocket_handler_xray" {
+  role       = aws_iam_role.websocket_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 resource "aws_iam_role_policy_attachment" "websocket_handler_basic" {
   role       = aws_iam_role.websocket_handler.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -177,6 +182,11 @@ data "aws_iam_policy_document" "rest_handler" {
   }
 }
 
+resource "aws_iam_role_policy_attachment" "rest_handler_xray" {
+  role       = aws_iam_role.rest_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 resource "aws_iam_role_policy_attachment" "rest_handler_basic" {
   role       = aws_iam_role.rest_handler.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -262,6 +272,11 @@ data "aws_iam_policy_document" "fanout_handler" {
     ]
     resources = ["arn:aws:logs:*:*:*"]
   }
+}
+
+resource "aws_iam_role_policy_attachment" "fanout_handler_xray" {
+  role       = aws_iam_role.fanout_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "fanout_handler_basic" {

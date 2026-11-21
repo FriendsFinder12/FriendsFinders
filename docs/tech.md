@@ -17,6 +17,7 @@
 - Amazon S3: profile pictures (server-side encryption) and the hosted web app; CloudFront serves the web app
 - AWS SSM Parameter Store: runtime settings
 - CloudWatch: log groups and error alarms per Lambda
+- X-Ray: active tracing on the three Lambdas; `src/utils/tracing.ts` wraps the AWS SDK clients (DynamoDB, SSM, S3, API Gateway management) with `aws-xray-sdk-core` so each call is a subsegment. It only instruments inside Lambda, so tests and local runs are unaffected. API Gateway HTTP and WebSocket APIs cannot be traced, so a trace starts at the Lambda
 
 ## AWS SDK
 
