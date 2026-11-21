@@ -211,7 +211,7 @@ terraform output frontend_url
 
 The Terraform `frontend-deploy` module uploads `frontend/index.html` to S3 and injects runtime config (Cognito IDs, API endpoints) into the page so it can talk to the deployed backend. The frontend has no build step — the file is deployed as-is.
 
-**Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and each has its own HCP Terraform workspace (`friendsfinders-dev`, `friendsfinders-prod`), so both can live in one AWS account. Switching environment means changing `TF_WORKSPACE` and the `-var-file`. `prod` also switches on safeguards: deletion protection and point-in-time recovery on the DynamoDB tables, deletion protection on the Cognito user pool, versioning on the profile-picture bucket and 30-day log retention. The Lambda error alarms are sent by email to the address in the `ALARM_EMAIL` secret of the `production` GitHub Environment (locally, `export TF_VAR_alarm_email=...`; AWS asks the address to confirm). It is a secret because the repository is public. Each environment has its own WebSocket stage name (`dev` or `prod`), which is the last part of the WebSocket URL. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
+**Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and each has its own HCP Terraform workspace (`friendsfinders-dev`, `friendsfinders-prod`), so both can live in one AWS account. Switching environment means changing `TF_WORKSPACE` and the `-var-file`. `prod` also switches on safeguards: deletion protection and point-in-time recovery on the DynamoDB tables, deletion protection on the Cognito user pool, versioning on the profile-picture bucket and 30-day log retention. The Lambda error alarms are sent by email to the address in the `ALARM_EMAIL` secret of the `production` GitHub Environment (locally, `export TF_VAR_alarm_email=...`; AWS asks the address to confirm). It is a secret because the repository is public. The same address receives the account's cost budget: `prod` creates a monthly budget of 10 USD (`monthly_budget_usd`) that warns at 50% and 100% of the limit and when 100% is forecast. A budget covers the whole account, so only one stack creates it (`create_account_budget`). Each environment has its own WebSocket stage name (`dev` or `prod`), which is the last part of the WebSocket URL. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
 
 > **First-time deploy:** Terraform state is stored in HCP Terraform, so a fresh `terraform init` needs an HCP organization with the two workspaces and `terraform login` first. See **Deployment & CI/CD** below for the one-time setup.
 
@@ -224,7 +224,7 @@ npm test                 # everything
 npm run test:unit        # handlers and wrappers
 npm run test:property    # fast-check property tests
 npm run test:frontend    # the web app, in a simulated browser
-npx jest --coverage      # with a coverage report
+npm run test:coverage    # with a coverage report; fails below the thresholds (80% utils, 70% rest)
 npm run type-check       # types, including the tests
 ```
 
@@ -331,8 +331,6 @@ This is a summary. The reasoning, and what each decision replaced, is in [`docs/
 
 Known gaps and ideas, roughly by value:
 
-- **CI checks** — the workflow only builds and applies on `main`. Add `type-check`, `npm test` and a pull-request trigger, plus a `terraform plan` job so changes are reviewed before they are applied.
-- **Coverage threshold** in `jest.config.ts`, once CI runs the tests.
 - **First friends message** — `$connect` sends `init.response` before the connection is fully established, so it may not be delivered. Confirm the web app recovers through `friends.refresh`, or send the first snapshot after the first `location.update`.
 - **One rule for several devices** — the WebSocket snapshot takes a friend's first located connection and the caller's latest, while `/nearby-friends` takes a friend's latest and the caller's first. Pick one rule (most recent update) and use it in both.
 - **Upload size limit** — the upload URL enforces the image type but not the file size; a presigned POST with a size condition would.

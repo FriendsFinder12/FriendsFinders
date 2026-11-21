@@ -46,6 +46,7 @@ Nearby Friends is an academic-purpose serverless real-time location sharing back
 - **Testing**:
   - Unit tests: `jest` with `ts-jest`.
   - Property-based tests: `fast-check` (minimum 100 iterations per property test).
+  - Coverage thresholds in `jest.config.ts`: 80% for `src/utils`, 70% for the rest (the handlers). `npm run test:coverage` enforces them and CI runs it.
   - AWS mocking: `aws-sdk-client-mock` for the wrappers in `src/utils`; handler tests replace those wrappers with `jest.mock()`.
   - Web app: `jsdom` opens the real `frontend/index.html` against a fake API (`tests/frontend`, helper `tests/helpers/page.ts`). Keep `jsdom` on the 26 series (newer versions are ES-module only and Jest cannot load them).
 - **Runtime Parameters (AWS SSM)**:
@@ -71,6 +72,7 @@ npm test             # Run Jest
 npm run test:unit    # Unit tests
 npm run test:property # Property tests (fast-check)
 npm run test:frontend # Web app tests (jsdom)
+npm run test:coverage # Tests with the coverage thresholds (CI runs this)
 
 # Terraform (first time: terraform login). Each environment (dev, prod) has its own tfvars in
 # terraform/envs/ and its own HCP workspace, chosen with TF_WORKSPACE.
@@ -88,7 +90,7 @@ terraform apply -var-file=envs/dev.tfvars
 - **Plan before building.** For anything non-trivial, write down the options and their trade-offs and agree on one before coding.
 - **Tests first.** Start with a failing test that describes the behaviour, then make it pass. For important logic, break the code on purpose to check that the tests notice.
 - **Definition of done.** `npm run type-check`, `npm test` and `npm run build` all pass, and the docs that describe the changed behaviour are updated in the same change.
-- **One change per branch.** Never work directly on `develop` or `main`. Open a pull request per change, merge them one at a time, and keep commits small and focused.
+- **One change per branch.** Never work directly on `develop`, `production` or `main`. Open a pull request per change, merge them one at a time, and keep commits small and focused. `develop` and `production` are protected: they only take pull requests whose two CI checks pass, and nobody, administrators included, can push to them or force-push.
 - **The tests describe the behaviour.** There are no separate requirement or task documents, because requirements change. Change the test and the code together.
 - **Keep docs short and derived from the code.** Do not copy interfaces or signatures into documents; link to the source. `docs/product.md` covers behaviour and the API, `docs/tech.md` the stack and commands, and `docs/architecture.md` how it is built and why.
 - **Record design decisions.** When you choose between designs, add an entry (what, why, what it replaces) to "Decisions" in `docs/architecture.md`, and a one-line summary to "Key Design Decisions" in the README if it is a headline choice.

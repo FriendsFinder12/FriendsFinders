@@ -35,12 +35,13 @@ AWS SDK for JavaScript v3, modular clients only:
 - CI/CD with GitHub Actions in `.github/workflows/`: `ci.yml` (pull requests: type-check, tests, build, `terraform fmt` and `validate`), `deploy-dev.yml` (push to `develop`) and `deploy-production.yml` (push to `production`, with reviewer approval), both calling the reusable `deploy-environment.yml`. GitHub Environments `develop` and `production` hold the variable `AWS_DEPLOY_ROLE_ARN` and the secret `TF_TOKEN_APP_TERRAFORM_IO`.
 - The provider versions are pinned by the committed `terraform/.terraform.lock.hcl`
 - One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and its own HCP workspace keeps its state. Without them Terraform builds the original single stack.
-- `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms; it comes from the `ALARM_EMAIL` secret of the production GitHub Environment or from `TF_VAR_alarm_email`, never from a committed file.
+- `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms; it comes from the `ALARM_EMAIL` secret of the production GitHub Environment or from `TF_VAR_alarm_email`, never from a committed file. The same address receives the monthly cost budget of the AWS account (`terraform/budget.tf`, 10 USD, set with `create_account_budget = true` in `prod.tfvars` only), which warns at 50% and 100% of the limit and when 100% is forecast. Without the address no budget is created.
 
 ## Testing
 
 - Jest with ts-jest. Unit tests are in `tests/unit`, property tests in `tests/property`, web app tests in `tests/frontend`, shared helpers in `tests/helpers`
 - fast-check for property-based tests (at least 100 runs per property)
+- Coverage thresholds in `jest.config.ts`: 80% for `src/utils` and 70% for the rest (the handlers). They are checked by `npm run test:coverage`, which CI runs on every pull request; plain `npm test` does not check them
 - AWS calls are never made in tests: the wrappers in `src/utils` are tested with `aws-sdk-client-mock`, and the handlers are tested with those wrappers replaced by `jest.mock()`
 - The web app is tested by opening the real `frontend/index.html` in `jsdom` (a simulated browser) with a fake API behind it; see `tests/helpers/page.ts`. `jsdom` is pinned to the 26 series because newer versions use ES modules that this Jest setup cannot load.
 
@@ -83,8 +84,8 @@ npm run test:unit
 npm run test:property
 npm run test:frontend
 
-# Coverage
-npx jest --coverage
+# Coverage report; fails below the thresholds in jest.config.ts
+npm run test:coverage
 
 # Terraform (first time: run `terraform login`; then pick the environment)
 cd terraform
