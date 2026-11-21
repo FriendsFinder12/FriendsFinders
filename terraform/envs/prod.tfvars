@@ -20,3 +20,7 @@ create_github_oidc_provider = false
 
 # GitHub puts ids in the subject of this repository's tokens (immutable subject claims).
 github_subject_prefix = "repo:FriendsFinder12@357106725/FriendsFinders@1245137645"
+
+# The monthly cost budget covers the whole AWS account, so only this stack creates it. It warns
+# the alarm email at 50% and 100% of monthly_budget_usd (10) and when 100% is forecast.
+create_account_budget = true
