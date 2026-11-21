@@ -224,7 +224,7 @@ npm test                 # everything
 npm run test:unit        # handlers and wrappers
 npm run test:property    # fast-check property tests
 npm run test:frontend    # the web app, in a simulated browser
-npx jest --coverage      # with a coverage report
+npm run test:coverage    # with a coverage report; fails below the thresholds (80% utils, 70% rest)
 npm run type-check       # types, including the tests
 ```
 
@@ -331,8 +331,6 @@ This is a summary. The reasoning, and what each decision replaced, is in [`docs/
 
 Known gaps and ideas, roughly by value:
 
-- **CI checks** — the workflow only builds and applies on `main`. Add `type-check`, `npm test` and a pull-request trigger, plus a `terraform plan` job so changes are reviewed before they are applied.
-- **Coverage threshold** in `jest.config.ts`, once CI runs the tests.
 - **First friends message** — `$connect` sends `init.response` before the connection is fully established, so it may not be delivered. Confirm the web app recovers through `friends.refresh`, or send the first snapshot after the first `location.update`.
 - **One rule for several devices** — the WebSocket snapshot takes a friend's first located connection and the caller's latest, while `/nearby-friends` takes a friend's latest and the caller's first. Pick one rule (most recent update) and use it in both.
 - **Upload size limit** — the upload URL enforces the image type but not the file size; a presigned POST with a size condition would.

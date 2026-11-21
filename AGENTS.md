@@ -46,6 +46,7 @@ Nearby Friends is an academic-purpose serverless real-time location sharing back
 - **Testing**:
   - Unit tests: `jest` with `ts-jest`.
   - Property-based tests: `fast-check` (minimum 100 iterations per property test).
+  - Coverage thresholds in `jest.config.ts`: 80% for `src/utils`, 70% for the rest (the handlers). `npm run test:coverage` enforces them and CI runs it.
   - AWS mocking: `aws-sdk-client-mock` for the wrappers in `src/utils`; handler tests replace those wrappers with `jest.mock()`.
   - Web app: `jsdom` opens the real `frontend/index.html` against a fake API (`tests/frontend`, helper `tests/helpers/page.ts`). Keep `jsdom` on the 26 series (newer versions are ES-module only and Jest cannot load them).
 - **Runtime Parameters (AWS SSM)**:
@@ -71,6 +72,7 @@ npm test             # Run Jest
 npm run test:unit    # Unit tests
 npm run test:property # Property tests (fast-check)
 npm run test:frontend # Web app tests (jsdom)
+npm run test:coverage # Tests with the coverage thresholds (CI runs this)
 
 # Terraform (first time: terraform login). Each environment (dev, prod) has its own tfvars in
 # terraform/envs/ and its own HCP workspace, chosen with TF_WORKSPACE.
