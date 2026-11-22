@@ -28,13 +28,13 @@ Nearby Friends is an academic-purpose serverless real-time location sharing back
 4. **Frontend**:
    - Single-file vanilla HTML/CSS/JavaScript in `frontend/index.html` (no build step, no framework).
    - Tile-free radar map rendered via HTML5 `<canvas>` (plots friends by distance and bearing).
-   - Deployed directly to S3 and served via CloudFront.
+   - Published to S3 by the deploy workflow (`scripts/render-frontend.js` adds the environment settings) and served via CloudFront; Terraform creates the bucket and distribution but does not upload the page.
 
 5. **Infrastructure as Code**:
    - Terraform only (`terraform/` directory with modular structure).
    - Two environments, `dev` and `prod`, are separate stacks from the same code (`terraform/envs/`): they differ only in configuration, never in `src/`.
    - State and locking in HCP Terraform (organization `nearbyfriends`, workspaces `friendsfinders-dev` and `friendsfinders-prod`, execution mode Local).
-   - CI/CD via GitHub Actions (`.github/workflows/`): `ci.yml` checks every pull request; a push to `develop` deploys `dev` and a push to `production` deploys `prod` after a reviewer approves the GitHub Environment. AWS access is by OIDC with one role per environment; the HCP token is the only stored secret.
+   - CI/CD via GitHub Actions (`.github/workflows/`): `ci.yml` checks every pull request; two pipelines, `backend.yml` and `frontend.yml`, each test first and then deploy: a push to `develop` deploys `dev` and a push to `production` deploys `prod` after a reviewer approves the GitHub Environment. AWS access is by OIDC with one role per environment; the HCP token is the only stored secret.
 
 ---
 
@@ -72,6 +72,7 @@ npm test             # Run Jest
 npm run test:unit    # Unit tests
 npm run test:property # Property tests (fast-check)
 npm run test:frontend # Web app tests (jsdom)
+npm run test:backend # Unit and property tests with the coverage thresholds
 npm run test:coverage # Tests with the coverage thresholds (CI runs this)
 
 # Terraform (first time: terraform login). Each environment (dev, prod) has its own tfvars in

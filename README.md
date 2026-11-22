@@ -126,9 +126,10 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 /
 ├── .github/workflows/
 │   ├── ci.yml                      # pull requests: type-check, test, build, terraform fmt/validate
-│   ├── deploy-environment.yml      # reusable: build + terraform apply for one environment
-│   ├── deploy-dev.yml              # push to develop -> dev
-│   └── deploy-production.yml       # push to production -> prod, after approval
+│   ├── backend.yml                 # push to develop -> dev, push to production -> prod (backend)
+│   ├── backend-environment.yml     # reusable: test, build and terraform apply for one environment
+│   ├── frontend.yml                # push to develop -> dev, push to production -> prod (web app)
+│   └── frontend-environment.yml    # reusable: test the page and publish it for one environment
 ├── frontend/
 │   └── index.html                  # Entire web app — HTML + CSS + JS, deployed as-is
 ├── terraform/
@@ -138,8 +139,8 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 │   ├── variables.tf, outputs.tf
 │   └── modules/
 │       ├── api-gateway/    ├── lambda/          ├── dynamodb/
-│       ├── cognito/        ├── frontend/        ├── frontend-deploy/
-│       ├── iam/            ├── ssm/             ├── s3/
+│       ├── cognito/        ├── frontend/        ├── iam/
+│       ├── ssm/            ├── s3/
 │       └── monitoring/
 ├── src/                            # Lambda handlers (backend)
 │   ├── handlers/
@@ -164,6 +165,7 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 │   └── helpers/                    # Shared test builders
 ├── scripts/
 │   ├── build.js                    # esbuild bundler → dist/<handler>.zip
+│   ├── render-frontend.js          # adds an environment's settings to frontend/index.html
 ├── docs/                           # Product, technology and architecture documentation
 │   ├── product.md                  # What the app does and its API
 │   ├── tech.md                     # Stack, settings and commands
@@ -211,7 +213,7 @@ terraform apply -var-file=envs/dev.tfvars
 terraform output frontend_url
 ```
 
-The Terraform `frontend-deploy` module uploads `frontend/index.html` to S3 and injects runtime config (Cognito IDs, API endpoints) into the page so it can talk to the deployed backend. The frontend has no build step — the file is deployed as-is.
+The web app is published by the deploy workflow, not by Terraform: [`scripts/render-frontend.js`](scripts/render-frontend.js) takes `frontend/index.html`, adds the runtime config of the environment (Cognito IDs, API endpoints, read from `terraform output`) and the job uploads it to S3 and invalidates CloudFront. The frontend has no build step, so the page is the file plus that config.
 
 **Environments.** `dev` and `prod` are two separate stacks built from the same code. `terraform/envs/<env>.tfvars` gives each its own resource-name prefix (`project_name`), SSM prefix and `environment` tag, and each has its own HCP Terraform workspace (`friendsfinders-dev`, `friendsfinders-prod`), so both can live in one AWS account. Switching environment means changing `TF_WORKSPACE` and the `-var-file`. `prod` also switches on safeguards: deletion protection and point-in-time recovery on the DynamoDB tables, deletion protection on the Cognito user pool, versioning on the profile-picture bucket and 30-day log retention. The Lambda error alarms are sent by email to the address in the `ALARM_EMAIL` secret of the `production` GitHub Environment (locally, `export TF_VAR_alarm_email=...`; AWS asks the address to confirm). It is a secret because the repository is public. The same address receives the account's cost budget: `prod` creates a monthly budget of 10 USD (`monthly_budget_usd`) that warns at 50% and 100% of the limit and when 100% is forecast. A budget covers the whole account, so only one stack creates it (`create_account_budget`). Each environment has its own WebSocket stage name (`dev` or `prod`), which is the last part of the WebSocket URL. Run without these files, Terraform builds the original single stack (`nearby-friends`, SSM under `/nearby-friends`).
 
@@ -226,6 +228,7 @@ npm test                 # everything
 npm run test:unit        # handlers and wrappers
 npm run test:property    # fast-check property tests
 npm run test:frontend    # the web app, in a simulated browser
+npm run test:backend     # unit and property tests with the coverage thresholds
 npm run test:coverage    # with a coverage report; fails below the thresholds (80% utils, 70% rest)
 npm run type-check       # types, including the tests
 ```
@@ -243,14 +246,19 @@ The tests are the executable description of how the system behaves: when a route
 
 ## 🔄 Deployment & CI/CD
 
-Two long-lived branches, two environments. A push deploys the matching environment with GitHub Actions:
+Two long-lived branches, two environments, and two pipelines: **Backend** and **Frontend**. A push deploys the matching environment with GitHub Actions:
 
-| Branch | Environment | Workflow | Approval |
-|---|---|---|---|
-| `develop` | `dev` (GitHub Environment `develop`, HCP workspace `friendsfinders-dev`) | [`deploy-dev.yml`](.github/workflows/deploy-dev.yml) | none; docs-only pushes do not deploy |
-| `production` | `prod` (GitHub Environment `production`, HCP workspace `friendsfinders-prod`) | [`deploy-production.yml`](.github/workflows/deploy-production.yml) | a reviewer approves the job first |
+| Branch | Environment | Approval |
+|---|---|---|
+| `develop` | `dev` (GitHub Environment `develop`, HCP workspace `friendsfinders-dev`) | none |
+| `production` | `prod` (GitHub Environment `production`, HCP workspace `friendsfinders-prod`) | a reviewer approves the job first |
 
-Both call [`deploy-environment.yml`](.github/workflows/deploy-environment.yml), and every pull request into `develop` or `production` runs [`ci.yml`](.github/workflows/ci.yml). Changes flow `feature branch → develop → production`; `main` does not deploy.
+| Pipeline | Runs when these change | Jobs |
+|---|---|---|
+| [`backend.yml`](.github/workflows/backend.yml) | `src/`, `terraform/`, the build script, the backend tests, `package.json` | `Dev` or `Prod`, each: test (type-check, unit and property tests with the coverage thresholds, build), then deploy (Terraform) |
+| [`frontend.yml`](.github/workflows/frontend.yml) | `frontend/`, `scripts/render-frontend.js`, the frontend tests | `Dev` or `Prod`, each: test (the page in jsdom), then publish (page to S3, CloudFront invalidated) |
+
+Each calls a reusable workflow ([`backend-environment.yml`](.github/workflows/backend-environment.yml), [`frontend-environment.yml`](.github/workflows/frontend-environment.yml)). The tests run before the job that waits for the reviewer, so production is approved with the tests already green. The page needs settings the backend creates (Cognito client, API URLs): the first time an environment exists, run Backend and then Frontend; after the backend replaces one of those, run Frontend by hand from the Actions tab. Docs-only pushes run neither pipeline. Every pull request into `develop` or `production` runs [`ci.yml`](.github/workflows/ci.yml). Changes flow `feature branch → develop → production`; `main` does not deploy.
 
 ```
 push → develop / production
