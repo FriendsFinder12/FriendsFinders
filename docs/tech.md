@@ -58,7 +58,7 @@ AWS SDK for JavaScript v3, modular clients only:
 
 ## SSM Parameters
 
-The paths below are the defaults (`ssm_prefix = /nearby-friends`). An environment sets its own prefix, for example `/nearby-friends-prod`, and the Lambdas receive the full paths through the `SSM_*` environment variables.
+The paths below are the defaults (`ssm_prefix = /nearby-friends`). An environment sets its own prefix, for example `/nearby-friends-prod`, and the Lambdas receive it in the `SSM_PREFIX` environment variable, from which `src/utils/config.ts` builds all five paths. A test (`tests/unit/lambda-environment.test.ts`) checks that every Lambda in Terraform gets it.
 
 - `/nearby-friends/search-radius-miles` (default: 5)
 - `/nearby-friends/inactivity-ttl-seconds` (default: 600)
