@@ -14,6 +14,9 @@ const config: Config = {
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
   collectCoverageFrom: ['src/**/*.ts'],
+  // text: the table in the log. json-summary: read by scripts/coverage-summary.js for the workflow
+  // summary. lcov: includes the HTML report that the backend pipeline keeps as an artifact.
+  coverageReporters: ['text', 'json-summary', 'lcov'],
   // Checked when the tests run with --coverage (npm run test:coverage, which CI uses). The
   // utilities hold the logic, so they must stay better covered than the handlers around them.
   // Jest leaves the files of a path rule out of 'global', so 'global' judges the rest: the handlers.
