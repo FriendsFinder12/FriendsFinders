@@ -15,8 +15,9 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { ConnectionRecord, UserProfile, FriendRequest } from '../types';
 import { cellOf, cellsAround } from './geo-cells';
+import { traced } from './tracing';
 
-const ddbClient = new DynamoDBClient({});
+const ddbClient = traced(new DynamoDBClient({}));
 const docClient = DynamoDBDocumentClient.from(ddbClient, {
   marshallOptions: { removeUndefinedValues: true },
 });

@@ -1,8 +1,9 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
+import { traced } from './tracing';
 
-const s3Client = new S3Client({});
+const s3Client = traced(new S3Client({}));
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || '';
 const PICTURE_CONTENT_TYPE = 'image/jpeg';
 

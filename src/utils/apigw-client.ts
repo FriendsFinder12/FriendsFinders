@@ -1,11 +1,12 @@
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
+import { traced } from './tracing';
 
 let client: ApiGatewayManagementApiClient | null = null;
 
 function getClient(): ApiGatewayManagementApiClient {
   if (!client) {
     const endpoint = process.env.WEBSOCKET_API_ENDPOINT;
-    client = new ApiGatewayManagementApiClient({ endpoint });
+    client = traced(new ApiGatewayManagementApiClient({ endpoint }));
   }
   return client;
 }

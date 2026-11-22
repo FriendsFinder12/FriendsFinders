@@ -1,6 +1,7 @@
 import { SSMClient, GetParametersCommand } from '@aws-sdk/client-ssm';
+import { traced } from './tracing';
 
-const ssmClient = new SSMClient({});
+const ssmClient = traced(new SSMClient({}));
 
 interface AppConfig {
   searchRadiusMiles: number;

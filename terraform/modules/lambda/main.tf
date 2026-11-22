@@ -24,6 +24,11 @@ resource "aws_lambda_function" "websocket_handler" {
   timeout       = 30
   memory_size   = 256
 
+  # X-Ray traces: one per invocation, with a subsegment for each AWS call (see src/utils/tracing.ts).
+  tracing_config {
+    mode = "Active"
+  }
+
   filename         = data.archive_file.websocket_handler.output_path
   source_code_hash = data.archive_file.websocket_handler.output_base64sha256
 
@@ -53,6 +58,11 @@ resource "aws_lambda_function" "rest_handler" {
   timeout       = 30
   memory_size   = 256
 
+  # X-Ray traces: one per invocation, with a subsegment for each AWS call (see src/utils/tracing.ts).
+  tracing_config {
+    mode = "Active"
+  }
+
   filename         = data.archive_file.rest_handler.output_path
   source_code_hash = data.archive_file.rest_handler.output_base64sha256
 
@@ -81,6 +91,11 @@ resource "aws_lambda_function" "fanout_handler" {
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
+
+  # X-Ray traces: one per invocation, with a subsegment for each AWS call (see src/utils/tracing.ts).
+  tracing_config {
+    mode = "Active"
+  }
 
   filename         = data.archive_file.fanout_handler.output_path
   source_code_hash = data.archive_file.fanout_handler.output_base64sha256
