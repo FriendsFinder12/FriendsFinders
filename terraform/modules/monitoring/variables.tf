@@ -35,3 +35,23 @@ variable "alarm_email" {
   type        = string
   default     = ""
 }
+
+variable "http_api_id" {
+  description = "ID of the HTTP (REST) API, for the dashboard"
+  type        = string
+}
+
+variable "websocket_api_id" {
+  description = "ID of the WebSocket API, for the dashboard"
+  type        = string
+}
+
+variable "websocket_stage_name" {
+  description = "Stage of the WebSocket API, for the dashboard"
+  type        = string
+}
+
+variable "cloudfront_distribution_id" {
+  description = "ID of the CloudFront distribution that serves the web app, for the dashboard"
+  type        = string
+}
