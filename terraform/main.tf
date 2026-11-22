@@ -204,5 +204,9 @@ module "monitoring" {
   websocket_handler_function_name = module.lambda.websocket_handler_function_name
   rest_handler_function_name      = module.lambda.rest_handler_function_name
   fanout_handler_function_name    = module.lambda.fanout_handler_function_name
+  http_api_id                     = module.api_gateway.http_api_id
+  websocket_api_id                = aws_apigatewayv2_api.websocket.id
+  websocket_stage_name            = aws_apigatewayv2_stage.websocket.name
+  cloudfront_distribution_id      = module.frontend.cloudfront_distribution_id
   tags                            = local.tags
 }

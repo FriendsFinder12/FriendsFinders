@@ -68,6 +68,7 @@ The diagram above is [`Friend-finder_architecture.drawio`](generated-diagrams/Fr
 | Amazon CloudFront          | HTTPS delivery of the web frontend                                    |
 | AWS SSM Parameter Store    | Runtime-configurable parameters                                       |
 | CloudWatch                 | Log groups and alarms per Lambda                                      |
+| CloudWatch dashboard       | Lambda, API Gateway and CloudFront metrics, one dashboard per stack  |
 | X-Ray                      | Traces of every Lambda call, with a subsegment per AWS call           |
 
 ### DynamoDB Tables
