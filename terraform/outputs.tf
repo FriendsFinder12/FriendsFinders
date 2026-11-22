@@ -52,3 +52,18 @@ output "cognito_hosted_ui_url" {
   description = "Cognito hosted UI base URL"
   value       = module.cognito.hosted_ui_base_url
 }
+
+output "frontend_bucket_name" {
+  description = "S3 bucket the deploy workflow publishes the web app to"
+  value       = module.frontend.bucket_name
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution to invalidate after publishing the web app"
+  value       = module.frontend.cloudfront_distribution_id
+}
+
+output "aws_region" {
+  description = "Region of the stack, read by the web app"
+  value       = var.aws_region
+}

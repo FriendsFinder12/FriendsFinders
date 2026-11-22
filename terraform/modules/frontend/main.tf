@@ -1,6 +1,9 @@
 resource "aws_s3_bucket" "frontend" {
   bucket = "${var.project_name}-frontend-${var.aws_account_id}"
   tags   = var.tags
+
+  # The page is rebuilt by every deploy, so nothing here is worth keeping when the stack is destroyed.
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
