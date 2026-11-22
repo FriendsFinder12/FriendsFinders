@@ -43,7 +43,7 @@ AWS SDK for JavaScript v3, modular clients only:
 
 - Jest with ts-jest. Unit tests are in `tests/unit`, property tests in `tests/property`, web app tests in `tests/frontend`, shared helpers in `tests/helpers`
 - fast-check for property-based tests (at least 100 runs per property)
-- Coverage thresholds in `jest.config.ts`: 80% for `src/utils` and 70% for the rest (the handlers). They are checked by `npm run test:coverage`, which CI runs on every pull request; plain `npm test` does not check them
+- Coverage thresholds in `jest.config.ts`: 80% for `src/utils` and 70% for the rest (the handlers). They are checked by `npm run test:coverage`, which CI runs on every pull request; plain `npm test` does not check them. `scripts/coverage-summary.js` turns the report (`coverage/coverage-summary.json`) into a table that `ci.yml` and the Backend pipeline write to the page of the run, even when a threshold fails, and the Backend pipeline also keeps the HTML report as an artifact for 14 days
 - AWS calls are never made in tests: the wrappers in `src/utils` are tested with `aws-sdk-client-mock`, and the handlers are tested with those wrappers replaced by `jest.mock()`
 - The web app is tested by opening the real `frontend/index.html` in `jsdom` (a simulated browser) with a fake API behind it; see `tests/helpers/page.ts`. `jsdom` is pinned to the 26 series because newer versions use ES modules that this Jest setup cannot load.
 

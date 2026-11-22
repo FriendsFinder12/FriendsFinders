@@ -166,6 +166,7 @@ The Connections table embeds location data (latitude, longitude, timestamp) alon
 ├── scripts/
 │   ├── build.js                    # esbuild bundler → dist/<handler>.zip
 │   ├── render-frontend.js          # adds an environment's settings to frontend/index.html
+│   ├── coverage-summary.js         # turns the coverage report into the table shown on a workflow run
 ├── docs/                           # Product, technology and architecture documentation
 │   ├── product.md                  # What the app does and its API
 │   ├── tech.md                     # Stack, settings and commands
@@ -230,6 +231,7 @@ npm run test:property    # fast-check property tests
 npm run test:frontend    # the web app, in a simulated browser
 npm run test:backend     # unit and property tests with the coverage thresholds
 npm run test:coverage    # with a coverage report; fails below the thresholds (80% utils, 70% rest)
+node scripts/coverage-summary.js   # after a coverage run: the same table the workflows show
 npm run type-check       # types, including the tests
 ```
 
