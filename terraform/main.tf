@@ -181,16 +181,16 @@ module "cognito" {
 # --- Frontend deploy (uploads index.html with injected runtime config) ---
 # Depends on both frontend infra and Cognito.
 
-module "frontend_deploy" {
-  source = "./modules/frontend-deploy"
+# The page is no longer uploaded by Terraform: the deploy workflow publishes it in its own job
+# (scripts/render-frontend.js), so a web change does not wait for the infrastructure. These blocks
+# make Terraform forget the old resources without deleting index.html from the bucket.
+# Delete them once every environment has been applied.
+removed {
+  from = module.frontend_deploy
 
-  frontend_bucket_name       = module.frontend.bucket_name
-  cloudfront_distribution_id = module.frontend.cloudfront_distribution_id
-  cognito_hosted_ui_base_url = module.cognito.hosted_ui_base_url
-  cognito_web_client_id      = module.cognito.web_client_id
-  http_api_endpoint          = module.api_gateway.http_api_endpoint
-  websocket_api_endpoint     = local.websocket_api_endpoint
-  aws_region                 = var.aws_region
+  lifecycle {
+    destroy = false
+  }
 }
 
 # --- Monitoring ---

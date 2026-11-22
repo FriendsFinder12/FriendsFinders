@@ -1,0 +1,42 @@
+name: Frontend
+
+# Tests and publishes the web app. A push to develop publishes dev; a push to production publishes
+# prod once a reviewer approves. Only changes to the page itself run it. The page also depends on
+# settings the backend creates (Cognito client, API URLs), so after the backend replaces one of
+# them, run this workflow by hand from the Actions tab to publish the page again.
+on:
+  push:
+    branches: [develop, production]
+    paths:
+      - frontend/**
+      - scripts/render-frontend.js
+      - tests/frontend/**
+      - tests/helpers/**
+      - tests/unit/render-frontend.test.ts
+      - package.json
+      - package-lock.json
+      - .github/workflows/frontend*.yml
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  dev:
+    name: Dev
+    if: github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/frontend-environment.yml
+    with:
+      environment: develop
+      workspace: friendsfinders-dev
+    secrets: inherit
+
+  prod:
+    name: Prod
+    if: github.ref == 'refs/heads/production'
+    uses: ./.github/workflows/frontend-environment.yml
+    with:
+      environment: production
+      workspace: friendsfinders-prod
+    secrets: inherit

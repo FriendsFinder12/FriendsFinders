@@ -32,9 +32,9 @@ AWS SDK for JavaScript v3, modular clients only:
 ## Infrastructure
 
 - Terraform only (no CDK, SAM or Serverless Framework); everything is declarative
-- Modules: `api-gateway`, `lambda`, `dynamodb`, `cognito`, `frontend`, `frontend-deploy`, `iam`, `ssm`, `s3`, `monitoring`, plus `cicd.tf` for the GitHub deploy role
+- Modules: `api-gateway`, `lambda`, `dynamodb`, `cognito`, `frontend`, `iam`, `ssm`, `s3`, `monitoring`, plus `cicd.tf` for the GitHub deploy role
 - State and locking in HCP Terraform, one workspace per environment (`friendsfinders-dev`, `friendsfinders-prod`) in the `nearbyfriends` organization, with the execution mode set to Local. Terraform still runs on the machine or CI runner that calls it, because it needs `dist/` and the AWS CLI; HCP only stores and locks the state. The organization and workspace come from `TF_CLOUD_ORGANIZATION` and `TF_WORKSPACE`, not from the code.
-- CI/CD with GitHub Actions in `.github/workflows/`: `ci.yml` (pull requests: type-check, tests, build, `terraform fmt` and `validate`), `deploy-dev.yml` (push to `develop`) and `deploy-production.yml` (push to `production`, with reviewer approval), both calling the reusable `deploy-environment.yml`. GitHub Environments `develop` and `production` hold the variable `AWS_DEPLOY_ROLE_ARN` and the secret `TF_TOKEN_APP_TERRAFORM_IO`.
+- CI/CD with GitHub Actions in `.github/workflows/`: `ci.yml` checks every pull request (type-check, tests, build, `terraform fmt` and `validate`). Two pipelines deploy, each on pushes to `develop` (dev) and to `production` (prod, with reviewer approval): `backend.yml` (test and build with `npm run test:backend`, then Terraform apply) and `frontend.yml` (the jsdom tests, then the page is published). They call the reusable `backend-environment.yml` and `frontend-environment.yml`, which run the tests in a job that needs no AWS access before the job that waits for approval. The page is published by the Frontend pipeline, not by Terraform: `scripts/render-frontend.js` injects the settings from `terraform output -json` into `frontend/index.html`, and the job copies it to the frontend bucket and invalidates CloudFront. GitHub Environments `develop` and `production` hold the variable `AWS_DEPLOY_ROLE_ARN` and the secret `TF_TOKEN_APP_TERRAFORM_IO`.
 - The provider versions are pinned by the committed `terraform/.terraform.lock.hcl`
 - One stack per environment (`dev`, `prod`) from the same code. `terraform/envs/<env>.tfvars` sets the `environment`, the `project_name` that prefixes the resource names and the SSM prefix, and its own HCP workspace keeps its state. Without them Terraform builds the original single stack.
 - `environment = "prod"` turns on the production safeguards: DynamoDB deletion protection and point-in-time recovery, Cognito deletion protection, S3 versioning for the pictures and longer log retention. `alarm_email` adds an SNS email notification to the Lambda error alarms; it comes from the `ALARM_EMAIL` secret of the production GitHub Environment or from `TF_VAR_alarm_email`, never from a committed file. The same address receives the monthly cost budget of the AWS account (`terraform/budget.tf`, 10 USD, set with `create_account_budget = true` in `prod.tfvars` only), which warns at 50% and 100% of the limit and when 100% is forecast. Without the address no budget is created.
@@ -85,6 +85,7 @@ npm test
 npm run test:unit
 npm run test:property
 npm run test:frontend
+npm run test:backend
 
 # Coverage report; fails below the thresholds in jest.config.ts
 npm run test:coverage

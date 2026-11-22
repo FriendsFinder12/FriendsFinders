@@ -1,0 +1,43 @@
+name: Backend
+
+# Tests and deploys the backend (Lambdas and infrastructure). A push to develop deploys dev; a push
+# to production deploys prod once a reviewer approves. Pushes that only change the web app or the
+# docs do not run it. Run it by hand from the Actions tab to redeploy without a push.
+on:
+  push:
+    branches: [develop, production]
+    paths:
+      - src/**
+      - terraform/**
+      - scripts/build.js
+      - tests/unit/**
+      - tests/property/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/backend*.yml
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  dev:
+    name: Dev
+    if: github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/backend-environment.yml
+    with:
+      environment: develop
+      workspace: friendsfinders-dev
+      tfvars: envs/dev.tfvars
+    secrets: inherit
+
+  prod:
+    name: Prod
+    if: github.ref == 'refs/heads/production'
+    uses: ./.github/workflows/backend-environment.yml
+    with:
+      environment: production
+      workspace: friendsfinders-prod
+      tfvars: envs/prod.tfvars
+    secrets: inherit
