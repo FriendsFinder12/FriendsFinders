@@ -19,12 +19,17 @@ const DEFAULTS: AppConfig = {
   nearbyStrangersLimit: 50,
 };
 
+// Every parameter lives under one prefix per environment (for example /nearby-friends-prod),
+// which Terraform passes as SSM_PREFIX. Building the paths from it means one variable cannot be
+// forgotten while the others are set, which used to send a request for a path IAM refused.
+const SSM_PREFIX = (process.env.SSM_PREFIX || '/nearby-friends').replace(/\/+$/, '');
+
 const PARAM_PATHS = {
-  searchRadiusMiles: process.env.SSM_SEARCH_RADIUS || '/nearby-friends/search-radius-miles',
-  inactivityTtlSeconds: process.env.SSM_INACTIVITY_TTL || '/nearby-friends/inactivity-ttl-seconds',
-  locationUpdateIntervalSeconds: process.env.SSM_LOCATION_UPDATE_INTERVAL || '/nearby-friends/location-update-interval-seconds',
-  maxFriends: process.env.SSM_MAX_FRIENDS || '/nearby-friends/max-friends',
-  nearbyStrangersLimit: process.env.SSM_NEARBY_STRANGERS_LIMIT || '/nearby-friends/nearby-strangers-limit',
+  searchRadiusMiles: `${SSM_PREFIX}/search-radius-miles`,
+  inactivityTtlSeconds: `${SSM_PREFIX}/inactivity-ttl-seconds`,
+  locationUpdateIntervalSeconds: `${SSM_PREFIX}/location-update-interval-seconds`,
+  maxFriends: `${SSM_PREFIX}/max-friends`,
+  nearbyStrangersLimit: `${SSM_PREFIX}/nearby-strangers-limit`,
 };
 
 // A good value is reused for this long, so a changed SSM parameter reaches a warm container
