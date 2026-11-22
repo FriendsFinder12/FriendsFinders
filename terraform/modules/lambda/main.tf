@@ -34,16 +34,13 @@ resource "aws_lambda_function" "websocket_handler" {
 
   environment {
     variables = {
-      USERS_TABLE_NAME             = var.users_table_name
-      CONNECTIONS_TABLE_NAME       = var.connections_table_name
-      FRIENDSHIPS_TABLE_NAME       = var.friendships_table_name
-      S3_BUCKET_NAME               = var.s3_bucket_name
-      WEBSOCKET_API_ENDPOINT       = replace(var.websocket_api_endpoint, "wss://", "https://")
-      SSM_SEARCH_RADIUS            = "${var.ssm_prefix}/search-radius-miles"
-      SSM_INACTIVITY_TTL           = "${var.ssm_prefix}/inactivity-ttl-seconds"
-      SSM_LOCATION_UPDATE_INTERVAL = "${var.ssm_prefix}/location-update-interval-seconds"
-      SSM_MAX_FRIENDS              = "${var.ssm_prefix}/max-friends"
-      COGNITO_USER_POOL_ID         = var.cognito_user_pool_id
+      USERS_TABLE_NAME       = var.users_table_name
+      CONNECTIONS_TABLE_NAME = var.connections_table_name
+      FRIENDSHIPS_TABLE_NAME = var.friendships_table_name
+      S3_BUCKET_NAME         = var.s3_bucket_name
+      WEBSOCKET_API_ENDPOINT = replace(var.websocket_api_endpoint, "wss://", "https://")
+      SSM_PREFIX             = var.ssm_prefix
+      COGNITO_USER_POOL_ID   = var.cognito_user_pool_id
     }
   }
 
@@ -74,10 +71,7 @@ resource "aws_lambda_function" "rest_handler" {
       FRIENDSHIPS_TABLE_NAME     = var.friendships_table_name
       S3_BUCKET_NAME             = var.s3_bucket_name
       WEBSOCKET_API_ENDPOINT     = replace(var.websocket_api_endpoint, "wss://", "https://")
-      SSM_SEARCH_RADIUS          = "${var.ssm_prefix}/search-radius-miles"
-      SSM_INACTIVITY_TTL         = "${var.ssm_prefix}/inactivity-ttl-seconds"
-      SSM_MAX_FRIENDS            = "${var.ssm_prefix}/max-friends"
-      SSM_NEARBY_STRANGERS_LIMIT = "${var.ssm_prefix}/nearby-strangers-limit"
+      SSM_PREFIX                 = var.ssm_prefix
     }
   }
 
@@ -107,8 +101,7 @@ resource "aws_lambda_function" "fanout_handler" {
       FRIENDSHIPS_TABLE_NAME = var.friendships_table_name
       S3_BUCKET_NAME         = var.s3_bucket_name
       WEBSOCKET_API_ENDPOINT = replace(var.websocket_api_endpoint, "wss://", "https://")
-      SSM_SEARCH_RADIUS      = "${var.ssm_prefix}/search-radius-miles"
-      SSM_INACTIVITY_TTL     = "${var.ssm_prefix}/inactivity-ttl-seconds"
+      SSM_PREFIX             = var.ssm_prefix
     }
   }
 

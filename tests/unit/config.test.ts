@@ -20,14 +20,7 @@ const DEFAULTS = {
   nearbyStrangersLimit: 50,
 };
 
-const OVERRIDE_VARS = [
-  'SSM_SEARCH_RADIUS',
-  'SSM_INACTIVITY_TTL',
-  'SSM_LOCATION_UPDATE_INTERVAL',
-  'SSM_MAX_FRIENDS',
-  'SSM_NEARBY_STRANGERS_LIMIT',
-  'CONFIG_CACHE_TTL_SECONDS',
-];
+const OVERRIDE_VARS = ['SSM_PREFIX', 'CONFIG_CACHE_TTL_SECONDS'];
 
 const CACHE_TTL = 300; // seconds a good value is used before SSM is asked again
 const RETRY_BACKOFF = 30; // seconds to wait before asking SSM again after a failure
@@ -89,26 +82,29 @@ describe('config: what is requested from SSM', () => {
     });
   });
 
-  it('uses parameter paths from the environment when they are set', async () => {
-    const { getConfig, ssm, GetParametersCommand } = loadConfig({
-      SSM_SEARCH_RADIUS: '/custom/radius',
-      SSM_INACTIVITY_TTL: '/custom/ttl',
-      SSM_LOCATION_UPDATE_INTERVAL: '/custom/interval',
-      SSM_MAX_FRIENDS: '/custom/max-friends',
-      SSM_NEARBY_STRANGERS_LIMIT: '/custom/strangers',
-    });
-    ssm.on(GetParametersCommand).resolves(parameters({ '/custom/radius': '9' }));
+  it('builds all five paths from SSM_PREFIX, so one setting cannot leave a path behind', async () => {
+    const { getConfig, ssm, GetParametersCommand } = loadConfig({ SSM_PREFIX: '/nearby-friends-prod' });
+    ssm.on(GetParametersCommand).resolves(parameters({ '/nearby-friends-prod/search-radius-miles': '9' }));
 
     const config = await getConfig();
 
     expect(ssm.commandCalls(GetParametersCommand)[0].args[0].input.Names).toEqual([
-      '/custom/radius',
-      '/custom/ttl',
-      '/custom/interval',
-      '/custom/max-friends',
-      '/custom/strangers',
+      '/nearby-friends-prod/search-radius-miles',
+      '/nearby-friends-prod/inactivity-ttl-seconds',
+      '/nearby-friends-prod/location-update-interval-seconds',
+      '/nearby-friends-prod/max-friends',
+      '/nearby-friends-prod/nearby-strangers-limit',
     ]);
     expect(config.searchRadiusMiles).toBe(9);
+  });
+
+  it('accepts a prefix written with a trailing slash', async () => {
+    const { getConfig, ssm, GetParametersCommand } = loadConfig({ SSM_PREFIX: '/custom/' });
+    ssm.on(GetParametersCommand).resolves(parameters({}));
+
+    await getConfig();
+
+    expect(ssm.commandCalls(GetParametersCommand)[0].args[0].input.Names[0]).toBe('/custom/search-radius-miles');
   });
 });
 
