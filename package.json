@@ -8,9 +8,10 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:backend": "jest --coverage tests/unit tests/property",
     "test:unit": "jest tests/unit",
     "test:property": "jest tests/property",
-    "test:frontend": "jest tests/frontend"
+    "test:frontend": "jest tests/frontend tests/unit/render-frontend.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.600.0",

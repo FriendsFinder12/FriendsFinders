@@ -1,0 +1,90 @@
+name: Frontend for an environment
+
+# Reusable workflow: tests and publishes the web app of one environment. It is called by
+# frontend.yml, never started by hand.
+#
+#   test (the page in jsdom, the settings script) --> publish (S3 and CloudFront)
+#
+# The page is frontend/index.html plus the settings of the environment (Cognito, API endpoints),
+# which scripts/render-frontend.js reads from the Terraform outputs. The infrastructure itself is
+# created by the backend workflow, so the first time an environment exists, run Backend first.
+#
+# Uses the same GitHub Environment variables and secrets as backend-environment.yml; the
+# production Environment also asks a reviewer to approve before the publish job starts.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment to publish to (develop or production)
+        type: string
+        required: true
+      workspace:
+        description: HCP Terraform workspace that holds the state (read for the outputs)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run test:frontend   # the real index.html in jsdom, against a fake API
+
+  publish:
+    name: Publish ${{ inputs.environment }}
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write   # request the OIDC token that AWS exchanges for the role
+      contents: read
+    concurrency:
+      group: frontend-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      TF_CLOUD_ORGANIZATION: nearbyfriends
+      TF_WORKSPACE: ${{ inputs.workspace }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: Read the settings of the environment
+        run: |
+          terraform -chdir=terraform init -input=false
+          terraform -chdir=terraform output -json > terraform-output.json
+
+      - name: Build the page for this environment
+        run: node scripts/render-frontend.js terraform-output.json site
+
+      - name: Publish the page
+        run: |
+          BUCKET=$(jq -r .frontend_bucket_name.value terraform-output.json)
+          DISTRIBUTION=$(jq -r .cloudfront_distribution_id.value terraform-output.json)
+          aws s3 cp site/index.html "s3://$BUCKET/index.html" --content-type text/html
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION" --paths /index.html

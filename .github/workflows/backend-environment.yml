@@ -1,0 +1,109 @@
+name: Backend for an environment
+
+# Reusable workflow: tests, builds and deploys the backend of one environment. It is called by
+# backend.yml, never started by hand.
+#
+#   test (type-check, unit and property tests with coverage, build) --> deploy (Terraform)
+#
+# The tests need no AWS access and run before the job that waits for the reviewer, so whoever
+# approves production sees green tests, and deploy ships the exact build that passed.
+#
+# Each GitHub Environment (develop, production) supplies:
+#   - variable AWS_DEPLOY_ROLE_ARN: the role this stack's Terraform created for it (cicd.tf),
+#     which only jobs of that Environment can assume through OIDC (no AWS keys stored);
+#   - secret TF_TOKEN_APP_TERRAFORM_IO: the HCP Terraform token that reads and locks the state;
+#   - optional secret ALARM_EMAIL: where the Lambda error alarms are sent (production only).
+# The production Environment also requires a reviewer to approve before the deploy job starts.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment to deploy to (develop or production)
+        type: string
+        required: true
+      workspace:
+        description: HCP Terraform workspace that holds the state
+        type: string
+        required: true
+      tfvars:
+        description: Terraform variables file for the environment, relative to terraform/
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run test:backend   # unit and property tests, with the coverage thresholds
+      - name: Build the Lambda bundles
+        run: npm run build   # node scripts/build.js -> dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lambda-bundles
+          path: dist/
+          retention-days: 7
+
+  deploy:
+    name: Deploy ${{ inputs.environment }}
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write   # request the OIDC token that AWS exchanges for the role
+      contents: read
+    # Never run two deploys of the same environment at once; let a running one finish.
+    concurrency:
+      group: backend-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      TF_CLOUD_ORGANIZATION: nearbyfriends
+      TF_WORKSPACE: ${{ inputs.workspace }}
+      # Terraform reads the token from this exact name; GitHub stores secret names in capitals.
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN_APP_TERRAFORM_IO }}
+      # An unset secret is an empty string, which means no alarm email.
+      TF_VAR_alarm_email: ${{ secrets.ALARM_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get the Lambda bundles that passed the tests
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-bundles
+          path: dist
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init -input=false
+        working-directory: terraform
+
+      - name: Terraform plan
+        run: terraform plan -input=false -var-file=${{ inputs.tfvars }} -out=tfplan
+        working-directory: terraform
+
+      - name: Terraform apply
+        run: terraform apply -input=false tfplan
+        working-directory: terraform
