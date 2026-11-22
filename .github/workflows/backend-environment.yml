@@ -48,6 +48,17 @@ jobs:
       - run: npm ci
       - run: npm run type-check
       - run: npm run test:backend   # unit and property tests, with the coverage thresholds
+      - name: Show the coverage on the run page
+        if: always()   # also when a threshold fails, which is when it is most useful
+        run: node scripts/coverage-summary.js >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ inputs.environment }}
+          path: coverage/lcov-report/
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Build the Lambda bundles
         run: npm run build   # node scripts/build.js -> dist/
 
