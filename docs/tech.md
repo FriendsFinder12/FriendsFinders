@@ -17,6 +17,7 @@
 - Amazon S3: profile pictures (server-side encryption) and the hosted web app; CloudFront serves the web app
 - AWS SSM Parameter Store: runtime settings
 - CloudWatch: log groups and error alarms per Lambda
+- CloudWatch dashboard `<project_name>-overview` (`terraform/modules/monitoring/dashboard.tf`): per-Lambda invocations, errors, throttles, duration (average and p95) and memory used against the configured size (a Logs Insights query over the `REPORT` lines), REST API requests, errors and latency, WebSocket connections and messages, and CloudFront requests and error rates. Lambda has no CPU metric: CPU scales with the memory setting
 - X-Ray: active tracing on the three Lambdas; `src/utils/tracing.ts` wraps the AWS SDK clients (DynamoDB, SSM, S3, API Gateway management) with `aws-xray-sdk-core` so each call is a subsegment. It only instruments inside Lambda, so tests and local runs are unaffected. API Gateway HTTP and WebSocket APIs cannot be traced, so a trace starts at the Lambda
 
 ## AWS SDK
